@@ -1,4 +1,4 @@
-package com.nailorsh.astralis.theme
+package com.nailorsh.astralis.core.ui.theme
 
 import androidx.compose.runtime.Composable
 

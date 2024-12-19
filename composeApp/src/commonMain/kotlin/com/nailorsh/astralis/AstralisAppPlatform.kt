@@ -9,8 +9,7 @@ class AstralisAppPlatform {
         private set
 
     fun start(
-        platformContext: PlatformContext,
-        applicationId: String,
+        platformContext: PlatformContext
     ) {
         appComponent = AppComponent.create(platformContext)
     }
