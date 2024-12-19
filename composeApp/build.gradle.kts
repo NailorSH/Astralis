@@ -8,6 +8,7 @@ plugins {
     alias(libs.plugins.compose)
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlinx.serialization)
+    alias(libs.plugins.ksp)
 }
 
 kotlin {
@@ -40,7 +41,7 @@ kotlin {
             implementation(libs.kotlinx.coroutines.core)
             implementation(libs.ktor.client.core)
             implementation(libs.ktor.client.content.negotiation)
-            implementation(libs.ktor.client.serialization)
+            implementation(libs.ktor.serialization.kotlinx.json)
             implementation(libs.ktor.client.logging)
             implementation(libs.androidx.lifecycle.viewmodel)
             implementation(libs.androidx.lifecycle.runtime.compose)
@@ -50,6 +51,11 @@ kotlin {
             implementation(libs.coil)
             implementation(libs.coil.network.ktor)
             implementation(libs.kotlinx.datetime)
+
+            //DI
+            implementation(libs.kotlinInject.runtime)
+            implementation(libs.kotlinInject.anvil.runtime)
+            implementation(libs.kotlinInject.anvil.runtime.optional)
         }
 
         commonTest.dependencies {
@@ -85,7 +91,7 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        minSdk = 21
+        minSdk = 24
         targetSdk = 35
 
         applicationId = "com.nailorsh.astralis.androidApp"
@@ -98,6 +104,18 @@ android {
 
 //https://developer.android.com/develop/ui/compose/testing#setup
 dependencies {
+    add("kspCommonMainMetadata", libs.kotlinInject.compiler)
+    add("kspAndroid", libs.kotlinInject.compiler)
+    add("kspJvm", libs.kotlinInject.compiler)
+    add("kspWasmJs", libs.kotlinInject.compiler)
+    add("kspJs", libs.kotlinInject.compiler)
+
+    add("kspCommonMainMetadata", libs.kotlinInject.anvil.compiler)
+    add("kspAndroid", libs.kotlinInject.anvil.compiler)
+    add("kspJvm", libs.kotlinInject.anvil.compiler)
+    add("kspWasmJs", libs.kotlinInject.anvil.compiler)
+    add("kspJs", libs.kotlinInject.anvil.compiler)
+
     androidTestImplementation(libs.androidx.uitest.junit4)
     debugImplementation(libs.androidx.uitest.testManifest)
 }
