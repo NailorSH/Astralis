@@ -1,6 +1,5 @@
 package com.nailorsh.astralis.core.data.remote
 
-import co.touchlab.kermit.Logger
 import com.nailorsh.astralis.core.data.remote.model.BodyPositionDto
 import com.nailorsh.astralis.core.data.remote.model.response.BodiesDto
 import com.nailorsh.astralis.core.data.remote.model.response.BodyPositionsDto
@@ -10,7 +9,6 @@ import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.get
 import io.ktor.client.request.parameter
-import io.ktor.client.statement.bodyAsText
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
 import kotlinx.datetime.format
@@ -26,12 +24,10 @@ import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
 class AstronomyApiImpl(
     private val client: HttpClient
 ) : AstronomyApi {
+
     // https://api.astronomyapi.com/api/v2/bodies
     override suspend fun getBodies(): Result<List<String>> = runCatching {
         val request = client.get("bodies")
-        val response = request.bodyAsText()
-        Logger.d("getBodies") { "Response: $response" }
-
         request.body<ResponseDto<BodiesDto>>().data.bodies
     }
 
@@ -54,8 +50,6 @@ class AstronomyApiImpl(
             parameter("output", "rows")
         }
 
-        val response = request.bodyAsText()
-        Logger.d("getAllBodiesPositions") { response }
         request.body<ResponseDto<BodyPositionsDto>>().data.rows.map { it.positions.first() }
     }
 }
