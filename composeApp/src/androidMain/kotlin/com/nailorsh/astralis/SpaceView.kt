@@ -5,22 +5,25 @@ import android.opengl.GLES20
 import android.opengl.GLSurfaceView
 import android.opengl.Matrix
 import android.view.MotionEvent
+import android.view.ScaleGestureDetector
+import co.touchlab.kermit.Logger
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
 import kotlin.math.cos
 import kotlin.math.sin
 
-class PlanetVisualizationView(context: Context) : GLSurfaceView(context) {
-    private val renderer: PlanetRenderer
+class SpaceView(context: Context) : GLSurfaceView(context) {
+    private val renderer: SpaceRenderer
 
     init {
         setEGLContextClientVersion(2)
-        renderer = PlanetRenderer(context)
+        renderer = SpaceRenderer(context)
         setRenderer(renderer)
         renderMode = RENDERMODE_CONTINUOUSLY
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
+        super.onTouchEvent(event)
         return renderer.onTouchEvent(event)
     }
 }
@@ -31,10 +34,16 @@ data class AstronomicalObject(
     val altitude: Float, // высота
     val distance: Float, // расстояние (в астрономических единицах)
     val magnitude: Float, // магнитуда
-    val color: FloatArray // цвет (RGBA)
+    val color: GlColor // цвет (RGBA)
 )
 
-class PlanetRenderer(private val context: Context) : GLSurfaceView.Renderer {
+enum class GlColor(val rgba: FloatArray) {
+    YELLOW(floatArrayOf(1.0f, 1.0f, 0f, 1f)),
+    GREY(floatArrayOf(0.8f, 0.8f, 0.8f, 1f)),
+    GREY2(floatArrayOf(0.5f, 0.5f, 0.5f, 1f))
+}
+
+class SpaceRenderer(private val context: Context) : GLSurfaceView.Renderer {
     private val planets = listOf(
         AstronomicalObject(
             "Sun",
@@ -42,7 +51,7 @@ class PlanetRenderer(private val context: Context) : GLSurfaceView.Renderer {
             10.04f,
             0.98378f,
             -26.77762f,
-            floatArrayOf(1.0f, 1.0f, 0f, 1f)
+            GlColor.YELLOW
         ),  // Желтый для Солнца
         AstronomicalObject(
             "Moon",
@@ -50,7 +59,7 @@ class PlanetRenderer(private val context: Context) : GLSurfaceView.Renderer {
             -43.26f,
             0.00270f,
             -9.90583f,
-            floatArrayOf(0.8f, 0.8f, 0.8f, 1f)
+            GlColor.GREY
         ), // Серый для Луны
         AstronomicalObject(
             "Mercury",
@@ -58,11 +67,14 @@ class PlanetRenderer(private val context: Context) : GLSurfaceView.Renderer {
             8.75f,
             1.44663f,
             -1.31155f,
-            floatArrayOf(0.5f, 0.5f, 0.5f, 1f)
+            GlColor.GREY2
         )  // Серый для Меркурия
     )
 
     private val sphereRenderer = SphereRenderer()
+    private val viewProjectionMatrix = FloatArray(16)
+    private var scaleFactor = 0f  // Начальный масштаб
+    private var scaleGestureDetector: ScaleGestureDetector
 
     private val viewMatrix = FloatArray(16)
     private val projectionMatrix = FloatArray(16)
@@ -73,18 +85,36 @@ class PlanetRenderer(private val context: Context) : GLSurfaceView.Renderer {
     private var altitude: Float = 0f  // Поворот камеры по вертикали (вверх-вниз)
     private var lastX: Float = 0f
     private var lastY: Float = 0f
-    private val sensitivity = 0.5f  // Чувствительность к повороту
+    private val sensitivity = 0.7f  // Чувствительность к повороту
+
+    init {
+        scaleGestureDetector = ScaleGestureDetector(
+            context,
+            object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
+                override fun onScale(detector: ScaleGestureDetector): Boolean {
+                    return onScaleEvent(detector.scaleFactor)
+                }
+            })
+    }
 
     override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
         GLES20.glClearColor(0f, 0f, 0f, 1f)
         GLES20.glEnable(GLES20.GL_DEPTH_TEST)
-        sphereRenderer.initialize(context)
+        sphereRenderer.initialize()
     }
 
-    override fun onSurfaceChanged(gl: GL10?, width: Int, height: Int) {
+    override fun onSurfaceChanged(unused: GL10?, width: Int, height: Int) {
         GLES20.glViewport(0, 0, width, height)
-        val ratio = width.toFloat() / height
-        Matrix.frustumM(projectionMatrix, 0, -ratio, ratio, -1f, 1f, 1f, 100f)
+
+        val aspectRatio = width.toFloat() / height
+        Matrix.perspectiveM(
+            projectionMatrix,
+            0,
+            45f,
+            aspectRatio,
+            1f,
+            1000f
+        ) // Проекционная матрица
     }
 
     override fun onDrawFrame(gl: GL10?) {
@@ -93,17 +123,49 @@ class PlanetRenderer(private val context: Context) : GLSurfaceView.Renderer {
         // Обновляем матрицу вида с учетом углов поворота
         val eyeX = 0f
         val eyeY = 0f
-        val eyeZ = -60f  // Начальная позиция камеры
+        val eyeZ = scaleFactor  // Начальная позиция камеры
 
-        val centerX = sin(Math.toRadians(azimuth.toDouble())).toFloat()  // Направление по оси X
-        val centerY = sin(Math.toRadians(altitude.toDouble())).toFloat()  // Направление по оси Y
-        val centerZ = cos(Math.toRadians(azimuth.toDouble())).toFloat()  // Направление по оси Z
+        val radAzimuth = Math.toRadians(azimuth.toDouble())
+        val radAltitude = Math.toRadians(altitude.toDouble())
 
-        Matrix.setLookAtM(viewMatrix, 0, eyeX, eyeY, eyeZ, centerX, centerY, centerZ, 0f, 1f, 0f)
+        val centerX = (cos(radAltitude) * sin(radAzimuth)).toFloat() // Направление по оси X
+        val centerY = sin(radAltitude).toFloat()                  // Направление по оси Y
+        val centerZ = (cos(radAltitude) * cos(radAzimuth)).toFloat() // Направление по оси Z
+
+        Matrix.setLookAtM(
+            viewMatrix, 0,
+            eyeX, eyeY, eyeZ,
+            centerX, centerY, centerZ,
+            0f, 1f, 0f
+        )
 
         // Рисуем фон (звезды)
-        sphereRenderer.drawBackground()
-        renderAstronomicalObjects(planets)
+        // Объединяем проекционную и видовую матрицы
+        Matrix.multiplyMM(viewProjectionMatrix, 0, projectionMatrix, 0, viewMatrix, 0)
+
+        // Рисуем небесную сферу
+        drawSkySphere()
+    }
+
+    private fun drawSkySphere(
+        sphereRadius: Float = 1.5f
+    ) {
+        // Создаем модельную матрицу с масштабированием до радиуса сферы
+        val modelMatrix = FloatArray(16).apply {
+            Matrix.setIdentityM(this, 0)
+            Matrix.scaleM(this, 0, sphereRadius, sphereRadius, sphereRadius)
+        }
+
+        // Объединяем модельную и видо-проекционную матрицы
+        val mvpMatrix = FloatArray(16).apply {
+            Matrix.multiplyMM(this, 0, viewProjectionMatrix, 0, modelMatrix, 0)
+        }
+
+        // Рисуем небесную сферу с голубым цветом
+        sphereRenderer.draw(
+            mvpMatrix,
+            floatArrayOf(0.1f, 0.2f, 0.8f, 1.0f)
+        ) // Пример голубого цвета
     }
 
     private fun drawPlanet(
@@ -145,11 +207,16 @@ class PlanetRenderer(private val context: Context) : GLSurfaceView.Renderer {
             val brightness = 1 / (10f * planet.magnitude)
 
             // Отрисовываем объект
-            drawPlanet(position, scale, brightness, planet.color)
+            drawPlanet(position, scale, brightness, planet.color.rgba)
         }
     }
 
     fun onTouchEvent(event: MotionEvent): Boolean {
+        Logger.d("onTouchEvent") { "pointerCount: ${event.pointerCount}" }
+        Logger.d("onTouchEvent") { "scaleFactor: $scaleFactor" }
+        Logger.d("onTouchEvent") { "azimuth: $azimuth" }
+        Logger.d("onTouchEvent") { "altitude: $altitude" }
+
         when (event.action) {
             MotionEvent.ACTION_DOWN -> {
                 // Сохраняем начальные координаты касания при первом касании
@@ -158,6 +225,7 @@ class PlanetRenderer(private val context: Context) : GLSurfaceView.Renderer {
             }
 
             MotionEvent.ACTION_MOVE -> {
+                // Обработка перемещения пальцев (возможно масштабирование)
                 // Получаем разницу с предыдущей позицией
                 val dx = event.x - lastX  // Разница по горизонтали
                 val dy = event.y - lastY  // Разница по вертикали
@@ -182,6 +250,13 @@ class PlanetRenderer(private val context: Context) : GLSurfaceView.Renderer {
                 // Событие отмены (если вдруг приложение потеряет фокус)
             }
         }
+        return true
+    }
+
+    fun onScaleEvent(scale: Float): Boolean {
+        if (scaleFactor == 0f) scaleFactor = 1f
+        scaleFactor /= scale
+
         return true
     }
 }
