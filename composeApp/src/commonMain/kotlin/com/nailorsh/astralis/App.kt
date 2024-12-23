@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -44,7 +45,12 @@ internal fun App() = AppTheme {
         else {
             LazyColumn {
                 items(list.toList()) {
-                    Text(it.distance.fromEarth.km)
+                    Text("Planet: ${it.name}")
+                    Text("altitude: ${it.position.horizontal.altitude}")
+                    Text("azimuth: ${it.position.horizontal.azimuth}")
+                    Text("distance in au: ${it.distance.fromEarth.au}")
+                    Text("distance in km: ${it.distance.fromEarth.km}")
+                    HorizontalDivider()
                 }
             }
         }

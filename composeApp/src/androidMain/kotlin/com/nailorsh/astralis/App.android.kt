@@ -2,19 +2,25 @@ package com.nailorsh.astralis
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.tooling.preview.Preview
 
 class AppActivity : ComponentActivity() {
+    private lateinit var planetVisualizationView: PlanetVisualizationView
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
-        setContent { App() }
+
+        // Initialize the GLSurfaceView
+        planetVisualizationView = PlanetVisualizationView(this)
+        setContentView(planetVisualizationView)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        planetVisualizationView.onResume()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        planetVisualizationView.onPause()
     }
 }
-
-@Preview
-@Composable
-fun AppPreview() { App() }

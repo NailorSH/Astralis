@@ -24,7 +24,6 @@ import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
 class AstronomyApiImpl(
     private val client: HttpClient
 ) : AstronomyApi {
-
     // https://api.astronomyapi.com/api/v2/bodies
     override suspend fun getBodies(): Result<List<String>> = runCatching {
         val request = client.get("bodies")

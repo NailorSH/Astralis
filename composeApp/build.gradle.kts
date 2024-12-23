@@ -3,7 +3,6 @@
 import org.jetbrains.compose.ExperimentalComposeLibrary
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
-import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.plugin.KotlinSourceSetTree
 
 plugins {
@@ -25,12 +24,6 @@ kotlin {
     jvm()
 
     js {
-        browser()
-        binaries.executable()
-    }
-
-    @OptIn(ExperimentalWasmDsl::class)
-    wasmJs {
         browser()
         binaries.executable()
     }
@@ -61,6 +54,9 @@ kotlin {
             implementation(libs.kotlinInject.runtime)
             implementation(libs.kotlinInject.anvil.runtime)
             implementation(libs.kotlinInject.anvil.runtime.optional)
+
+            // KGL
+            implementation(libs.kgl)
         }
 
         commonTest.dependencies {
@@ -75,19 +71,24 @@ kotlin {
             implementation(libs.androidx.activityCompose)
             implementation(libs.kotlinx.coroutines.android)
             implementation(libs.ktor.client.cio)
+
+            // KGL
+            implementation(libs.kgl.android)
         }
 
         jvmMain.dependencies {
             implementation(compose.desktop.currentOs)
             implementation(libs.kotlinx.coroutines.swing)
             implementation(libs.ktor.client.cio)
+
+            // KGL
+            implementation(libs.kgl.lwjgl)
         }
 
         jsMain.dependencies {
             implementation(compose.html.core)
             implementation(libs.ktor.client.js)
         }
-
     }
 }
 
@@ -112,13 +113,11 @@ dependencies {
     add("kspCommonMainMetadata", libs.kotlinInject.compiler)
     add("kspAndroid", libs.kotlinInject.compiler)
     add("kspJvm", libs.kotlinInject.compiler)
-    add("kspWasmJs", libs.kotlinInject.compiler)
     add("kspJs", libs.kotlinInject.compiler)
 
     add("kspCommonMainMetadata", libs.kotlinInject.anvil.compiler)
     add("kspAndroid", libs.kotlinInject.anvil.compiler)
     add("kspJvm", libs.kotlinInject.anvil.compiler)
-    add("kspWasmJs", libs.kotlinInject.anvil.compiler)
     add("kspJs", libs.kotlinInject.anvil.compiler)
 
     androidTestImplementation(libs.androidx.uitest.junit4)

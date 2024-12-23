@@ -1,5 +1,6 @@
 [versions]
 
+kgl = "0.6.3"
 kotlin = "2.1.0"
 compose = "1.7.1"
 agp = "8.6.1"
@@ -23,11 +24,21 @@ androidx-activityCompose = { module = "androidx.activity:activity-compose", vers
 androidx-uitest-testManifest = { module = "androidx.compose.ui:ui-test-manifest", version.ref = "androidx-uiTest" }
 androidx-uitest-junit4 = { module = "androidx.compose.ui:ui-test-junit4", version.ref = "androidx-uiTest" }
 kermit = { module = "co.touchlab:kermit", version.ref = "kermit" }
+
+# KGL
+kgl = { module = "com.danielgergely.kgl:kgl", version.ref = "kgl" }
+kgl-android = { module = "com.danielgergely.kgl:kgl-android", version.ref = "kgl" }
+kgl-lwjgl = { module = "com.danielgergely.kgl:kgl-lwjgl", version.ref = "kgl" }
+
+# kotlin-inject
 kotlinInject-compiler = { module = "me.tatarka.inject:kotlin-inject-compiler-ksp", version.ref = "kotlinInject" }
 kotlinInject-runtime = { module = 'me.tatarka.inject:kotlin-inject-runtime', version.ref = 'kotlinInject' }
+
+# kotlin-inject-anvil
 kotlinInject-anvil-runtime = { module = "software.amazon.lastmile.kotlin.inject.anvil:runtime", version.ref = "kotlinInject-anvil" }
 kotlinInject-anvil-runtime-optional = { module = "software.amazon.lastmile.kotlin.inject.anvil:runtime-optional", version.ref = "kotlinInject-anvil" }
 kotlinInject-anvil-compiler = { module = "software.amazon.lastmile.kotlin.inject.anvil:compiler", version.ref = "kotlinInject-anvil" }
+
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
 kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "kotlinx-coroutines" }
 kotlinx-coroutines-swing = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-swing", version.ref = "kotlinx-coroutines" }

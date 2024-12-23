@@ -12,6 +12,9 @@ pluginManagement {
         }
         gradlePluginPortal()
         mavenCentral()
+
+        // KGL
+        maven("https://maven.danielgergely.com/releases")
     }
 }
 
@@ -26,6 +29,9 @@ dependencyResolutionManagement {
             }
         }
         mavenCentral()
+
+        // KGL
+        maven("https://maven.danielgergely.com/releases")
     }
 }
 include(":composeApp")
