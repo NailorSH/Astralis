@@ -1,6 +1,10 @@
 package com.nailorsh.astralis
 
+import android.content.Context
+import android.graphics.BitmapFactory
 import android.opengl.GLES20
+import android.opengl.GLUtils
+import co.touchlab.kermit.Logger
 import java.nio.FloatBuffer
 import java.nio.ShortBuffer
 
@@ -11,6 +15,7 @@ class SphereRenderer {
     private lateinit var indexBuffer: ShortBuffer
     private var vertexCount: Int = 0
     private var indexCount: Int = 0
+    private var backgroundTexture: Int = 0
 
     private val vertexShaderCode = """
         uniform mat4 uMVPMatrix;
@@ -28,7 +33,7 @@ class SphereRenderer {
         }
     """
 
-    fun initialize() {
+    fun initialize(context: Context) {
         generateSphere(30, 30)
 
         val vertexShader = loadShader(GLES20.GL_VERTEX_SHADER, vertexShaderCode)
@@ -39,6 +44,25 @@ class SphereRenderer {
             GLES20.glAttachShader(it, fragmentShader)
             GLES20.glLinkProgram(it)
         }
+
+        // Загружаем текстуру для фона
+        backgroundTexture =
+            loadTexture(context, R.drawable.background) // Замените на свой файл текстуры
+    }
+
+    fun drawBackground() {
+        GLES20.glUseProgram(program)
+
+        // Привязываем текстуру
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, backgroundTexture)
+
+        // Рисуем сферу с текстурой (фоновое небо)
+        GLES20.glDrawElements(
+            GLES20.GL_TRIANGLES,
+            indexCount,
+            GLES20.GL_UNSIGNED_SHORT,
+            indexBuffer
+        )
     }
 
     private fun generateSphere(latitudeBands: Int, longitudeBands: Int) {
@@ -98,7 +122,7 @@ class SphereRenderer {
         }
     }
 
-    fun draw(mvpMatrix: FloatArray) {
+    fun draw(mvpMatrix: FloatArray, color: FloatArray) {
         GLES20.glUseProgram(program)
 
         val positionHandle = GLES20.glGetAttribLocation(program, "vPosition").also {
@@ -107,7 +131,7 @@ class SphereRenderer {
         }
 
         val colorHandle = GLES20.glGetUniformLocation(program, "vColor")
-        GLES20.glUniform4fv(colorHandle, 1, floatArrayOf(0.6f, 0.6f, 1f, 1f), 0)
+        GLES20.glUniform4fv(colorHandle, 1, color, 0) // Передаем цвет (RGBA)
 
         val mvpMatrixHandle = GLES20.glGetUniformLocation(program, "uMVPMatrix")
         GLES20.glUniformMatrix4fv(mvpMatrixHandle, 1, false, mvpMatrix, 0)
@@ -128,5 +152,54 @@ class SphereRenderer {
             GLES20.glCompileShader(shader)
         }
     }
+
+    private fun loadTexture(context: Context, resourceId: Int): Int {
+        val textureHandle = IntArray(1)
+        GLES20.glGenTextures(1, textureHandle, 0)
+
+        if (textureHandle[0] != 0) {
+            GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureHandle[0])
+
+            // Устанавливаем параметры текстуры
+            GLES20.glTexParameteri(
+                GLES20.GL_TEXTURE_2D,
+                GLES20.GL_TEXTURE_MIN_FILTER,
+                GLES20.GL_LINEAR
+            )
+            GLES20.glTexParameteri(
+                GLES20.GL_TEXTURE_2D,
+                GLES20.GL_TEXTURE_MAG_FILTER,
+                GLES20.GL_LINEAR
+            )
+            GLES20.glTexParameteri(
+                GLES20.GL_TEXTURE_2D,
+                GLES20.GL_TEXTURE_WRAP_S,
+                GLES20.GL_CLAMP_TO_EDGE
+            )
+            GLES20.glTexParameteri(
+                GLES20.GL_TEXTURE_2D,
+                GLES20.GL_TEXTURE_WRAP_T,
+                GLES20.GL_CLAMP_TO_EDGE
+            )
+
+            // Загружаем изображение
+            val bitmap = BitmapFactory.decodeResource(context.resources, resourceId)
+            if (bitmap == null) {
+                Logger.e("TextureLoader") { "Error loading texture: bitmap is null" }
+            } else {
+                Logger.d("TextureLoader") { "Texture loaded successfully" }
+            }
+
+            // Загружаем изображение как текстуру
+            GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, bitmap, 0)
+            bitmap.recycle()
+        } else {
+            throw RuntimeException("Error generating texture handle")
+        }
+
+        return textureHandle[0]
+    }
+
+
 }
 
