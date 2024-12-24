@@ -7,24 +7,21 @@ import android.opengl.Matrix
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import co.touchlab.kermit.Logger
+import com.nailorsh.astralis.core.utils.graphics.compileShader
+import com.nailorsh.astralis.core.utils.graphics.createProgram
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
 import kotlin.math.cos
 import kotlin.math.sin
 
 class SpaceView(context: Context) : GLSurfaceView(context) {
-    private val renderer: SpaceRenderer
+    private val renderer: SphereRenderer2
 
     init {
         setEGLContextClientVersion(2)
-        renderer = SpaceRenderer(context)
+        renderer = SphereRenderer2(context)
         setRenderer(renderer)
         renderMode = RENDERMODE_CONTINUOUSLY
-    }
-
-    override fun onTouchEvent(event: MotionEvent): Boolean {
-        super.onTouchEvent(event)
-        return renderer.onTouchEvent(event)
     }
 }
 
@@ -70,6 +67,10 @@ class SpaceRenderer(private val context: Context) : GLSurfaceView.Renderer {
             GlColor.GREY2
         )  // Серый для Меркурия
     )
+
+    private var useTexture = true
+    private var program = 0
+    private var textureId = 0
 
     private val sphereRenderer = SphereRenderer()
     private val viewProjectionMatrix = FloatArray(16)
@@ -209,6 +210,30 @@ class SpaceRenderer(private val context: Context) : GLSurfaceView.Renderer {
             // Отрисовываем объект
             drawPlanet(position, scale, brightness, planet.color.rgba)
         }
+    }
+
+    private fun initializeShaderProgram(
+        vertexShaderCode: String,
+        fragmentShaderCode: String,
+        useTexture: Boolean
+    ): Int {
+        val vertexShader = compileShader(GLES20.GL_VERTEX_SHADER, vertexShaderCode)
+        val fragmentShader =
+            compileShader(GLES20.GL_FRAGMENT_SHADER, fragmentShaderCode)
+
+        val program = createProgram(vertexShader, fragmentShader)
+
+        GLES20.glUseProgram(program)
+
+        if (useTexture) {
+            val textureHandle = GLES20.glGetUniformLocation(program, "uTexture")
+            GLES20.glUniform1i(
+                textureHandle,
+                0
+            ) // Указываем, что текстура будет использоваться в unit 0
+        }
+
+        return program
     }
 
     fun onTouchEvent(event: MotionEvent): Boolean {
