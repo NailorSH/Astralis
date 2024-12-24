@@ -23,6 +23,11 @@ class SpaceView(context: Context) : GLSurfaceView(context) {
         setRenderer(renderer)
         renderMode = RENDERMODE_CONTINUOUSLY
     }
+
+    override fun onTouchEvent(event: MotionEvent?): Boolean {
+        renderer.toggleWireframeMode()
+        return super.onTouchEvent(event)
+    }
 }
 
 data class AstronomicalObject(

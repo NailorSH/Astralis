@@ -18,7 +18,7 @@ import javax.microedition.khronos.opengles.GL10
 import kotlin.math.cos
 import kotlin.math.sin
 
-val vertexShader = """
+val vertexShaderSkySphere = """
     attribute vec4 aPosition; // Позиция вершины
     attribute vec2 aTexCoord; // Текстурные координаты
     uniform mat4 uMVPMatrix; // Модельная проекционная матрица
@@ -30,7 +30,7 @@ val vertexShader = """
     }
 """.trimIndent()
 
-val fragmentShader = """
+val fragmentShaderSkySphere = """
     precision mediump float;
     uniform sampler2D uTexture; // Текстура
     varying vec2 vTexCoord; // Текстурные координаты
@@ -40,18 +40,40 @@ val fragmentShader = """
     }
 """.trimIndent()
 
-private val fragmentShaderNoTexture = """
-    precision mediump float;
-    uniform vec4 uColor;
+val vertexShaderPlanets = """
+    attribute vec4 aPosition; // Позиция вершины
+    attribute vec2 aTexCoord; // Текстурные координаты
+    uniform mat4 uMVPMatrix; // Модельно-видовая проекционная матрица
+    varying vec2 vTexCoord; // Передача текстурных координат во фрагментный шейдер
 
     void main() {
-        gl_FragColor = uColor;
+        gl_Position = uMVPMatrix * aPosition; // Позиция вершины
+        vTexCoord = aTexCoord; // Передача текстурных координат
     }
+
 """.trimIndent()
 
+val fragmentShaderPlanets = """
+    precision mediump float;
+    uniform sampler2D uTexture; // Текстура
+    varying vec2 vTexCoord; // Текстурные координаты
+
+    void main() {
+        gl_FragColor = texture2D(uTexture, vTexCoord); // Получение цвета из текстуры
+    }
+
+""".trimIndent()
+
+data class Planet(
+    val position: FloatArray, // Позиция планеты {x, y, z}
+    val size: Float,          // Размер планеты
+    val textureId: Int        // ID текстуры планеты
+)
+
 class SphereRenderer2(private val context: Context) : GLSurfaceView.Renderer {
-    private var useTexture = true
     private var wireframeMode = false // Флаг для режима wireframe
+
+    private val planets = mutableListOf<Planet>()
 
     // Матрицы
     private val modelMatrix = FloatArray(16)
@@ -60,7 +82,8 @@ class SphereRenderer2(private val context: Context) : GLSurfaceView.Renderer {
     private val mvpMatrix = FloatArray(16)
 
     // OpenGL ресурсы
-    private var program = 0
+    private var programSkySphere = 0
+    private var programPlanets = 0
     private var textureId = 0
 
     // Буферы для данных сферы
@@ -70,21 +93,36 @@ class SphereRenderer2(private val context: Context) : GLSurfaceView.Renderer {
     private var indexCount = 0
 
     // Параметры анимации
-    private var alpha = 45f
-    private var beta = 45f
-    private var size = 0.3f
-    private var position = floatArrayOf(0f, 0f, 0f)
-    private var velocity = floatArrayOf(0.1f, 0.01f, 0.2f)
-    private val boundaries = floatArrayOf(1f, 1f, 1f)
-    private val sphereRadius = 0.2f
-    private val timeStep = 0.016f
+//    private var alpha = 0f
+//    private var beta = 0f
+//    private var size = 0.3f
+//    private var position = floatArrayOf(0f, 0f, 0f)
 
     override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
         GLES20.glClearColor(0.1f, 0.1f, 0.1f, 1f)
         GLES20.glEnable(GLES20.GL_DEPTH_TEST)
 
-        // Инициализация программы на основе флага useTexture
-        updateShaderProgram()
+        planets.addAll(
+            listOf(
+                Planet(
+                    position = floatArrayOf(1f, 0f, -2f),
+                    size = 0.1f,
+                    textureId = loadTexture(context, R.drawable.mars).also {
+                        Logger.d("loadTexture") { "mars texture: $this" }
+                    }
+                ),
+                Planet(
+                    position = floatArrayOf(-1.5f, 0.5f, -3f),
+                    size = 0.2f,
+                    textureId = loadTexture(context, R.drawable.sun).also {
+                        Logger.d("loadTexture") { "sun texture: $this" }
+                    }
+                )
+            )
+        )
+
+        programSkySphere = initializeShaderProgram(vertexShaderSkySphere, fragmentShaderSkySphere)
+        programPlanets = initializeShaderProgram(vertexShaderPlanets, fragmentShaderPlanets)
 
         // Загрузка текстуры
         textureId = loadTexture(context, R.drawable.background)
@@ -124,67 +162,46 @@ class SphereRenderer2(private val context: Context) : GLSurfaceView.Renderer {
     override fun onDrawFrame(gl: GL10?) {
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT or GLES20.GL_DEPTH_BUFFER_BIT)
 
-        updatePosition()
+        updatePlanets()
 
+        // Отрисовка небесной сферы
         Matrix.setIdentityM(modelMatrix, 0)
-        Matrix.translateM(modelMatrix, 0, position[0], position[1], position[2])
-        Matrix.scaleM(modelMatrix, 0, size, size, size)
-        Matrix.rotateM(modelMatrix, 0, alpha, 0f, 1f, 0f)
-        Matrix.rotateM(modelMatrix, 0, beta, 1f, 0f, 0f)
 
         Matrix.multiplyMM(mvpMatrix, 0, viewMatrix, 0, modelMatrix, 0)
         Matrix.multiplyMM(mvpMatrix, 0, projectionMatrix, 0, mvpMatrix, 0)
 
         drawSphere()
-    }
 
-    private fun updateShaderProgram() {
-        val vertexShaderCode = vertexShader
-        val fragmentShaderCode = if (useTexture) fragmentShader else fragmentShaderNoTexture
-
-        program = initializeShaderProgram(vertexShaderCode, fragmentShaderCode, useTexture)
-    }
-
-    private fun updatePosition() {
-        alpha++
-        for (i in position.indices) {
-            position[i] += velocity[i] * timeStep
-            if (kotlin.math.abs(position[i]) + sphereRadius >= boundaries[i]) {
-                velocity[i] = -velocity[i]
-                position[i] = kotlin.math.sign(position[i]) * (boundaries[i] - sphereRadius)
-            }
+        // Отрисовка планет
+        for (planet in planets) {
+            drawPlanet(planet)
         }
     }
 
     private fun drawSphere() {
-        GLES20.glUseProgram(program)
+        GLES20.glUseProgram(programSkySphere)
 
-        val mvpMatrixHandle = GLES20.glGetUniformLocation(program, "uMVPMatrix")
+        val mvpMatrixHandle = GLES20.glGetUniformLocation(programSkySphere, "uMVPMatrix")
         GLES20.glUniformMatrix4fv(mvpMatrixHandle, 1, false, mvpMatrix, 0)
 
-        val positionHandle = GLES20.glGetAttribLocation(program, "aPosition")
+        val positionHandle = GLES20.glGetAttribLocation(programSkySphere, "aPosition")
         GLES20.glEnableVertexAttribArray(positionHandle)
         GLES20.glVertexAttribPointer(positionHandle, 3, GLES20.GL_FLOAT, false, 5 * 4, vertexBuffer)
 
-        if (useTexture) {
-            val texCoordHandle = GLES20.glGetAttribLocation(program, "aTexCoord")
-            GLES20.glEnableVertexAttribArray(texCoordHandle)
-            val texCoordBuffer = vertexBuffer!!.duplicate()
-            texCoordBuffer.position(3)
-            GLES20.glVertexAttribPointer(
-                texCoordHandle,
-                2,
-                GLES20.GL_FLOAT,
-                false,
-                5 * 4,
-                texCoordBuffer
-            )
+        val texCoordHandle = GLES20.glGetAttribLocation(programSkySphere, "aTexCoord")
+        GLES20.glEnableVertexAttribArray(texCoordHandle)
+        val texCoordBuffer = vertexBuffer!!.duplicate()
+        texCoordBuffer.position(3)
+        GLES20.glVertexAttribPointer(
+            texCoordHandle,
+            2,
+            GLES20.GL_FLOAT,
+            false,
+            5 * 4,
+            texCoordBuffer
+        )
 
-            GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureId)
-        } else {
-            val colorHandle = GLES20.glGetUniformLocation(program, "uColor")
-            GLES20.glUniform4f(colorHandle, 1f, 0f, 0f, 1f) // Устанавливаем цвет (красный)
-        }
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureId)
 
         if (wireframeMode) {
             GLES20.glDrawElements(
@@ -202,18 +219,76 @@ class SphereRenderer2(private val context: Context) : GLSurfaceView.Renderer {
             )
         }
 
+        GLES20.glDisableVertexAttribArray(positionHandle)
+        GLES20.glDisableVertexAttribArray(GLES20.glGetAttribLocation(programSkySphere, "aTexCoord"))
+    }
+
+    private fun updatePlanets() {
+        val time = System.currentTimeMillis() % 10000L / 10000f
+        for ((index, planet) in planets.withIndex()) {
+            val angle = time * 360f + index * 30f
+            planet.position[0] =
+                cos(Math.toRadians(angle.toDouble())).toFloat() * (1.0f + index * 0.5f)
+            planet.position[2] =
+                sin(Math.toRadians(angle.toDouble())).toFloat() * (1.0f + index * 0.5f)
+        }
+    }
+
+    private fun drawPlanet(planet: Planet) {
+        Matrix.setIdentityM(modelMatrix, 0)
+        Matrix.translateM(
+            modelMatrix,
+            0,
+            planet.position[0],
+            planet.position[1],
+            planet.position[2]
+        )
+        Matrix.scaleM(modelMatrix, 0, planet.size, planet.size, planet.size)
+
+        Matrix.multiplyMM(mvpMatrix, 0, viewMatrix, 0, modelMatrix, 0)
+        Matrix.multiplyMM(mvpMatrix, 0, projectionMatrix, 0, mvpMatrix, 0)
+
+        GLES20.glUseProgram(programPlanets)
+
+        val mvpMatrixHandle = GLES20.glGetUniformLocation(programPlanets, "uMVPMatrix")
+        GLES20.glUniformMatrix4fv(mvpMatrixHandle, 1, false, mvpMatrix, 0)
+
+        val positionHandle = GLES20.glGetAttribLocation(programPlanets, "aPosition")
+        GLES20.glEnableVertexAttribArray(positionHandle)
+        GLES20.glVertexAttribPointer(positionHandle, 3, GLES20.GL_FLOAT, false, 5 * 4, vertexBuffer)
+
+        val texCoordHandle = GLES20.glGetAttribLocation(programPlanets, "aTexCoord")
+        GLES20.glEnableVertexAttribArray(texCoordHandle)
+        val texCoordBuffer = vertexBuffer!!.duplicate()
+        texCoordBuffer.position(3)
+        GLES20.glVertexAttribPointer(
+            texCoordHandle,
+            2,
+            GLES20.GL_FLOAT,
+            false,
+            5 * 4,
+            texCoordBuffer
+        )
+
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, planet.textureId).apply {
+            Logger.d("planet.textureId") { "textureId = ${planet.textureId}" }
+        }
+
+        GLES20.glDrawElements(
+            GLES20.GL_TRIANGLES,
+            indexCount,
+            GLES20.GL_UNSIGNED_SHORT,
+            indexBuffer
+        )
 
         GLES20.glDisableVertexAttribArray(positionHandle)
-        if (useTexture) {
-            GLES20.glDisableVertexAttribArray(GLES20.glGetAttribLocation(program, "aTexCoord"))
-        }
+        GLES20.glDisableVertexAttribArray(texCoordHandle)
     }
 
     private fun generateSphereData(latitudeBands: Int, longitudeBands: Int) {
         val vertices = mutableListOf<Float>()
         val indices = mutableListOf<Short>()
         val wireframeIndices = mutableListOf<Short>()
-
 
         for (lat in 0..latitudeBands) {
             val theta = Math.PI * lat / latitudeBands
@@ -231,8 +306,6 @@ class SphereRenderer2(private val context: Context) : GLSurfaceView.Renderer {
                 val u = lon.toFloat() / longitudeBands // Текстурные координаты U
                 val v = lat.toFloat() / latitudeBands // Текстурные координаты V
 
-                Logger.d("TextureCoord") { "Vertex: ($x, $y, $z), TexCoord: ($u, $v)" }
-
                 // Генерация вершин
                 vertices.addAll(
                     listOf(
@@ -248,14 +321,6 @@ class SphereRenderer2(private val context: Context) : GLSurfaceView.Renderer {
             for (lon in 0 until longitudeBands) {
                 val first = (lat * (longitudeBands + 1) + lon).toShort()
                 val second = (first + longitudeBands + 1).toShort()
-
-//                indices.add(first)
-//                indices.add(second)
-//                indices.add((first + 1).toShort())
-//
-//                indices.add(second)
-//                indices.add((second + 1).toShort())
-//                indices.add((first + 1).toShort())
 
                 // Для триангуляции
                 indices.add(first)
@@ -308,7 +373,6 @@ class SphereRenderer2(private val context: Context) : GLSurfaceView.Renderer {
     private fun initializeShaderProgram(
         vertexShaderCode: String,
         fragmentShaderCode: String,
-        useTexture: Boolean
     ): Int {
         val vertexShader = compileShader(GLES20.GL_VERTEX_SHADER, vertexShaderCode)
         val fragmentShader =
@@ -318,22 +382,16 @@ class SphereRenderer2(private val context: Context) : GLSurfaceView.Renderer {
 
         GLES20.glUseProgram(program)
 
-        if (useTexture) {
-            val textureHandle = GLES20.glGetUniformLocation(program, "uTexture")
-            GLES20.glUniform1i(
-                textureHandle,
-                0
-            ) // Указываем, что текстура будет использоваться в unit 0
-        }
+        val textureHandle = GLES20.glGetUniformLocation(program, "uTexture")
+        GLES20.glUniform1i(
+            textureHandle,
+            0
+        ) // Указываем, что текстура будет использоваться в unit 0
 
         return program
     }
 
     fun toggleWireframeMode() {
         wireframeMode = !wireframeMode
-    }
-
-    fun toggleTextureMode() {
-        useTexture = !useTexture
     }
 }
