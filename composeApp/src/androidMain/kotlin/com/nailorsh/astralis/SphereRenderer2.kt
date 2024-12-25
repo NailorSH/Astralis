@@ -5,6 +5,8 @@ import android.content.Context
 import android.opengl.GLES20
 import android.opengl.GLSurfaceView
 import android.opengl.Matrix
+import android.view.GestureDetector
+import android.view.MotionEvent
 import co.touchlab.kermit.Logger
 import com.nailorsh.astralis.core.utils.graphics.compileShader
 import com.nailorsh.astralis.core.utils.graphics.createProgram
@@ -40,6 +42,15 @@ val fragmentShaderSkySphere = """
     }
 """.trimIndent()
 
+private val fragmentShaderSkySphereNoTexture = """
+    precision mediump float;
+    uniform vec4 uColor;
+
+    void main() {
+        gl_FragColor = uColor;
+    }
+""".trimIndent()
+
 val vertexShaderPlanets = """
     attribute vec4 aPosition; // Позиция вершины
     attribute vec2 aTexCoord; // Текстурные координаты
@@ -71,9 +82,40 @@ data class Planet(
 )
 
 class SphereRenderer2(private val context: Context) : GLSurfaceView.Renderer {
-    private var wireframeMode = false // Флаг для режима wireframe
+    private val gestureDetector = GestureDetector(
+        context,
+        object : GestureDetector.SimpleOnGestureListener() {
+            override fun onScroll(
+                e1: MotionEvent?,
+                e2: MotionEvent,
+                distanceX: Float,
+                distanceY: Float
+            ): Boolean {
+                Logger.d("GestureDetector") { "onScroll: distanceX=$distanceX, distanceY=$distanceY" }
+
+                // Регулировка чувствительности
+                val sensitivity = 0.2f
+                azimuth -= distanceX * sensitivity
+                altitude -= distanceY * sensitivity
+
+                // Ограничение вертикального угла (камера не может смотреть "вверх ногами")
+                altitude = altitude.coerceIn(-90f, 90f)
+
+                return true
+            }
+        }
+    )
+
+    private var useTexSky = false
+    private var wireframeMode = true // Флаг для режима wireframe
 
     private val planets = mutableListOf<Planet>()
+
+    private var azimuth = 0f // Угол поворота влево-вправо
+    private var altitude = 0f // Угол поворота вверх-вниз
+
+    private var previousX = 0f
+    private var previousY = 0f
 
     // Матрицы
     private val modelMatrix = FloatArray(16)
@@ -92,12 +134,6 @@ class SphereRenderer2(private val context: Context) : GLSurfaceView.Renderer {
     private var wireframeIndexBuffer: ShortBuffer? = null
     private var indexCount = 0
 
-    // Параметры анимации
-//    private var alpha = 0f
-//    private var beta = 0f
-//    private var size = 0.3f
-//    private var position = floatArrayOf(0f, 0f, 0f)
-
     override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
         GLES20.glClearColor(0.1f, 0.1f, 0.1f, 1f)
         GLES20.glEnable(GLES20.GL_DEPTH_TEST)
@@ -107,25 +143,25 @@ class SphereRenderer2(private val context: Context) : GLSurfaceView.Renderer {
                 Planet(
                     position = floatArrayOf(1f, 0f, -2f),
                     size = 0.1f,
-                    textureId = loadTexture(context, R.drawable.mars).also {
-                        Logger.d("loadTexture") { "mars texture: $this" }
-                    }
+                    textureId = loadTexture(context, R.drawable.mars)
                 ),
                 Planet(
                     position = floatArrayOf(-1.5f, 0.5f, -3f),
                     size = 0.2f,
-                    textureId = loadTexture(context, R.drawable.sun).also {
-                        Logger.d("loadTexture") { "sun texture: $this" }
-                    }
+                    textureId = loadTexture(context, R.drawable.sun)
                 )
             )
         )
 
-        programSkySphere = initializeShaderProgram(vertexShaderSkySphere, fragmentShaderSkySphere)
+        programSkySphere = initializeShaderProgram(
+            vertexShaderSkySphere,
+            if (useTexSky) fragmentShaderSkySphere else fragmentShaderSkySphereNoTexture
+        )
         programPlanets = initializeShaderProgram(vertexShaderPlanets, fragmentShaderPlanets)
 
         // Загрузка текстуры
-        textureId = loadTexture(context, R.drawable.background)
+        // https://www.flickr.com/photos/nasawebbtelescope/54183500660/
+        textureId = loadTexture(context, R.drawable.space)
 
         // Генерация данных сферы
         generateSphereData(40, 40)
@@ -162,6 +198,9 @@ class SphereRenderer2(private val context: Context) : GLSurfaceView.Renderer {
     override fun onDrawFrame(gl: GL10?) {
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT or GLES20.GL_DEPTH_BUFFER_BIT)
 
+        // Обновляем матрицу вида
+        updateViewMatrix()
+
         updatePlanets()
 
         // Отрисовка небесной сферы
@@ -188,20 +227,28 @@ class SphereRenderer2(private val context: Context) : GLSurfaceView.Renderer {
         GLES20.glEnableVertexAttribArray(positionHandle)
         GLES20.glVertexAttribPointer(positionHandle, 3, GLES20.GL_FLOAT, false, 5 * 4, vertexBuffer)
 
-        val texCoordHandle = GLES20.glGetAttribLocation(programSkySphere, "aTexCoord")
-        GLES20.glEnableVertexAttribArray(texCoordHandle)
-        val texCoordBuffer = vertexBuffer!!.duplicate()
-        texCoordBuffer.position(3)
-        GLES20.glVertexAttribPointer(
-            texCoordHandle,
-            2,
-            GLES20.GL_FLOAT,
-            false,
-            5 * 4,
-            texCoordBuffer
-        )
+        if (useTexSky) {
+            val texCoordHandle = GLES20.glGetAttribLocation(programSkySphere, "aTexCoord")
+            GLES20.glEnableVertexAttribArray(texCoordHandle)
+            val texCoordBuffer = vertexBuffer!!.duplicate()
+            texCoordBuffer.position(3)
+            GLES20.glVertexAttribPointer(
+                texCoordHandle,
+                2,
+                GLES20.GL_FLOAT,
+                false,
+                5 * 4,
+                texCoordBuffer
+            )
 
-        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureId)
+            GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureId)
+        } else {
+            GLES20.glEnable(GLES20.GL_BLEND)
+            GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA)
+
+            val colorHandle = GLES20.glGetUniformLocation(programSkySphere, "uColor")
+            GLES20.glUniform4f(colorHandle, 0f, 0f, 0f, 1f) // Устанавливаем цвет (прозрачный)
+        }
 
         if (wireframeMode) {
             GLES20.glDrawElements(
@@ -220,7 +267,14 @@ class SphereRenderer2(private val context: Context) : GLSurfaceView.Renderer {
         }
 
         GLES20.glDisableVertexAttribArray(positionHandle)
-        GLES20.glDisableVertexAttribArray(GLES20.glGetAttribLocation(programSkySphere, "aTexCoord"))
+        if (useTexSky) {
+            GLES20.glDisableVertexAttribArray(
+                GLES20.glGetAttribLocation(
+                    programSkySphere,
+                    "aTexCoord"
+                )
+            )
+        }
     }
 
     private fun updatePlanets() {
@@ -270,9 +324,7 @@ class SphereRenderer2(private val context: Context) : GLSurfaceView.Renderer {
             texCoordBuffer
         )
 
-        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, planet.textureId).apply {
-            Logger.d("planet.textureId") { "textureId = ${planet.textureId}" }
-        }
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, planet.textureId)
 
         GLES20.glDrawElements(
             GLES20.GL_TRIANGLES,
@@ -370,6 +422,32 @@ class SphereRenderer2(private val context: Context) : GLSurfaceView.Renderer {
         }
     }
 
+    private fun updateViewMatrix() {
+        val eye = floatArrayOf(0f, 0f, 0f) // Позиция камеры
+        val center = FloatArray(3) // Точка, на которую смотрит камера
+        val up = floatArrayOf(0f, 1f, 1f) // Вектор "вверх"
+
+        // Угол поворота камеры
+        val radAzimuth = Math.toRadians(azimuth.toDouble())
+        val radAltitude = Math.toRadians(altitude.toDouble())
+
+        // Вычисляем направление взгляда камеры
+        // Перевод сферических координат в декартовые
+        center[0] = (sin(radAzimuth) * cos(radAltitude)).toFloat()
+        center[1] = sin(radAltitude).toFloat()
+        center[2] = (cos(radAzimuth) * cos(radAltitude)).toFloat()
+
+        // Вычисляем матрицу вида
+        Matrix.setLookAtM(
+            viewMatrix,
+            0,
+            eye[0], eye[1], eye[2],
+            center[0], center[1], center[2],
+            up[0], up[1], up[2]
+        )
+    }
+
+
     private fun initializeShaderProgram(
         vertexShaderCode: String,
         fragmentShaderCode: String,
@@ -393,5 +471,34 @@ class SphereRenderer2(private val context: Context) : GLSurfaceView.Renderer {
 
     fun toggleWireframeMode() {
         wireframeMode = !wireframeMode
+    }
+
+    fun onTouchEvent(event: MotionEvent): Boolean {
+        when (event.action) {
+            MotionEvent.ACTION_DOWN -> {
+                // Сохраняем начальные координаты касания
+                previousX = event.x
+                previousY = event.y
+            }
+
+            MotionEvent.ACTION_MOVE -> {
+                // Вычисляем разницу координат
+                val deltaX = event.x - previousX
+                val deltaY = event.y - previousY
+
+                // Обновляем углы камеры
+                val sensitivity = 0.5f
+                azimuth += deltaX * sensitivity
+                altitude -= deltaY * sensitivity
+
+                // Ограничиваем вертикальный угол (чтобы избежать переворота)
+                altitude = altitude.coerceIn(-89f, 89f)
+
+                // Сохраняем текущие координаты как предыдущие
+                previousX = event.x
+                previousY = event.y
+            }
+        }
+        return true // Возвращаем true, чтобы событие было обработано
     }
 }
