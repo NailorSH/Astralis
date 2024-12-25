@@ -34,7 +34,17 @@ internal fun App() = AppTheme {
                     fromDate = currentDate(),
                     toDate = currentDate(),
                     time = currentTime(),
-                ).getOrThrow().toMutableStateList()
+                ).getOrThrow().also { newList ->
+                    newList.forEach {
+                        Logger.d("API") { "BodyWithPosition(" }
+                        Logger.d("API") { "    id = \"${it.id}\"," }
+                        Logger.d("API") { "    azimuthDegrees = ${it.position.horizontal.azimuth.degrees}," }
+                        Logger.d("API") { "    altitudeDegrees = ${it.position.horizontal.altitude.degrees}," }
+                        Logger.d("API") { "    distanceFromEarthAU = ${it.distance.fromEarth.au}," }
+                        Logger.d("API") { "    textureId = loadTexture(context, R.drawable.${it.id})" }
+                        Logger.d("API") { ")," }
+                    }
+                }.toMutableStateList()
             )
         } catch (e: Exception) {
             Logger.e(e) { "App" }

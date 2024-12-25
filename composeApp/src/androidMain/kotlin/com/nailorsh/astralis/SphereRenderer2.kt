@@ -75,10 +75,12 @@ val fragmentShaderPlanets = """
 
 """.trimIndent()
 
-data class Planet(
-    val position: FloatArray, // Позиция планеты {x, y, z}
-    val size: Float,          // Размер планеты
-    val textureId: Int        // ID текстуры планеты
+data class BodyWithPosition(
+    val id: String,
+    val azimuthDegrees: Double,
+    val altitudeDegrees: Double,
+    val distanceFromEarthAU: Double,
+    val textureId: Int
 )
 
 class SphereRenderer2(private val context: Context) : GLSurfaceView.Renderer {
@@ -109,7 +111,7 @@ class SphereRenderer2(private val context: Context) : GLSurfaceView.Renderer {
     private var useTexSky = false
     private var wireframeMode = true // Флаг для режима wireframe
 
-    private val planets = mutableListOf<Planet>()
+    private val planets = mutableListOf<BodyWithPosition>()
 
     private var azimuth = 0f // Угол поворота влево-вправо
     private var altitude = 0f // Угол поворота вверх-вниз
@@ -140,16 +142,76 @@ class SphereRenderer2(private val context: Context) : GLSurfaceView.Renderer {
 
         planets.addAll(
             listOf(
-                Planet(
-                    position = floatArrayOf(1f, 0f, -2f),
-                    size = 0.1f,
+                BodyWithPosition(
+                    id = "sun",
+                    azimuthDegrees = 86.98,
+                    altitudeDegrees = -30.30,
+                    distanceFromEarthAU = 0.98356,
+                    textureId = loadTexture(context, R.drawable.sun)
+                ),
+//                BodyWithPosition(
+//                    id = "moon",
+//                    azimuthDegrees = 138.79,
+//                    altitudeDegrees = 12.93,
+//                    distanceFromEarthAU = 0.00269,
+//                    textureId = loadTexture(context, R.drawable.moon)
+//                ),
+                BodyWithPosition(
+                    id = "mercury",
+                    azimuthDegrees = 103.87,
+                    altitudeDegrees = -14.48,
+                    distanceFromEarthAU = 1.01530,
+                    textureId = loadTexture(context, R.drawable.mercury)
+                ),
+                BodyWithPosition(
+                    id = "venus",
+                    azimuthDegrees = 29.51,
+                    altitudeDegrees = -47.52,
+                    distanceFromEarthAU = 0.80160,
+                    textureId = loadTexture(context, R.drawable.venus)
+                ),
+                BodyWithPosition(
+                    id = "mars",
+                    azimuthDegrees = 233.92,
+                    altitudeDegrees = 47.67,
+                    distanceFromEarthAU = 0.67816,
                     textureId = loadTexture(context, R.drawable.mars)
                 ),
-                Planet(
-                    position = floatArrayOf(-1.5f, 0.5f, -3f),
-                    size = 0.2f,
-                    textureId = loadTexture(context, R.drawable.sun)
-                )
+                BodyWithPosition(
+                    id = "jupiter",
+                    azimuthDegrees = 283.23,
+                    altitudeDegrees = 17.62,
+                    distanceFromEarthAU = 4.14377,
+                    textureId = loadTexture(context, R.drawable.jupiter)
+                ),
+                BodyWithPosition(
+                    id = "saturn",
+                    azimuthDegrees = 356.39,
+                    altitudeDegrees = -41.98,
+                    distanceFromEarthAU = 9.91938,
+                    textureId = loadTexture(context, R.drawable.saturn)
+                ),
+                BodyWithPosition(
+                    id = "uranus",
+                    azimuthDegrees = 298.12,
+                    altitudeDegrees = 3.83,
+                    distanceFromEarthAU = 18.78885,
+                    textureId = loadTexture(context, R.drawable.uranus)
+                ),
+                BodyWithPosition(
+                    id = "neptune",
+                    azimuthDegrees = 342.05,
+                    altitudeDegrees = -34.85,
+                    distanceFromEarthAU = 29.98838,
+                    textureId = loadTexture(context, R.drawable.neptune)
+                ),
+                BodyWithPosition(
+                    id = "pluto",
+                    azimuthDegrees = 58.05,
+                    altitudeDegrees = -46.08,
+                    distanceFromEarthAU = 36.03690,
+                    textureId = loadTexture(context, R.drawable.pluto)
+                ),
             )
         )
 
@@ -185,7 +247,7 @@ class SphereRenderer2(private val context: Context) : GLSurfaceView.Renderer {
         GLES20.glViewport(0, 0, width, height)
 
         val aspectRatio = width.toFloat() / height
-        Matrix.perspectiveM(projectionMatrix, 0, 45f, aspectRatio, 0.1f, 100f)
+        Matrix.perspectiveM(projectionMatrix, 0, 45f, aspectRatio, 0.1f, 500f)
 
         Matrix.setLookAtM(
             viewMatrix, 0,
@@ -201,8 +263,6 @@ class SphereRenderer2(private val context: Context) : GLSurfaceView.Renderer {
         // Обновляем матрицу вида
         updateViewMatrix()
 
-        updatePlanets()
-
         // Отрисовка небесной сферы
         Matrix.setIdentityM(modelMatrix, 0)
 
@@ -212,9 +272,7 @@ class SphereRenderer2(private val context: Context) : GLSurfaceView.Renderer {
         drawSphere()
 
         // Отрисовка планет
-        for (planet in planets) {
-            drawPlanet(planet)
-        }
+        renderPlanets()
     }
 
     private fun drawSphere() {
@@ -277,31 +335,46 @@ class SphereRenderer2(private val context: Context) : GLSurfaceView.Renderer {
         }
     }
 
-    private fun updatePlanets() {
-        val time = System.currentTimeMillis() % 10000L / 10000f
-        for ((index, planet) in planets.withIndex()) {
-            val angle = time * 360f + index * 30f
-            planet.position[0] =
-                cos(Math.toRadians(angle.toDouble())).toFloat() * (1.0f + index * 0.5f)
-            planet.position[2] =
-                sin(Math.toRadians(angle.toDouble())).toFloat() * (1.0f + index * 0.5f)
+    private fun renderPlanets() {
+        planets.forEach { planet ->
+            // Конвертация горизонтальных координат в декартовы
+            val altitudeRadians = Math.toRadians(planet.altitudeDegrees)
+            val azimuthRadians = Math.toRadians(planet.azimuthDegrees)
+
+            val distanceMultiplier = 30.0 // Умножаем на 10 для увеличения расстояния
+            val x = cos(altitudeRadians) * sin(azimuthRadians) * distanceMultiplier
+            val y = sin(altitudeRadians) * distanceMultiplier
+            val z = cos(altitudeRadians) * cos(azimuthRadians) * distanceMultiplier
+
+            Logger.d("PlanetPosition") {
+                "Planet ${planet.id}: x=$x, y=$y, z=$z"
+            }
+
+            // Устанавливаем позицию планеты в пространстве
+            val position = floatArrayOf(x.toFloat(), y.toFloat(), z.toFloat())
+
+            // Определяем масштаб (по расстоянию до Земли)
+            val scale = (1.0 / planet.distanceFromEarthAU).toFloat()
+
+            // Модельная матрица для планеты
+            val modelMatrix = FloatArray(16).apply {
+                Matrix.setIdentityM(this, 0)
+                Matrix.translateM(this, 0, position[0], position[1], position[2])
+                Matrix.scaleM(this, 0, scale, scale, scale)
+            }
+
+            // Итоговая MVP-матрица
+            val mvpMatrix = FloatArray(16).apply {
+                Matrix.multiplyMM(this, 0, viewMatrix, 0, modelMatrix, 0)
+                Matrix.multiplyMM(this, 0, projectionMatrix, 0, this, 0)
+            }
+
+            // Рисуем планету
+            drawPlanet(mvpMatrix, planet)
         }
     }
 
-    private fun drawPlanet(planet: Planet) {
-        Matrix.setIdentityM(modelMatrix, 0)
-        Matrix.translateM(
-            modelMatrix,
-            0,
-            planet.position[0],
-            planet.position[1],
-            planet.position[2]
-        )
-        Matrix.scaleM(modelMatrix, 0, planet.size, planet.size, planet.size)
-
-        Matrix.multiplyMM(mvpMatrix, 0, viewMatrix, 0, modelMatrix, 0)
-        Matrix.multiplyMM(mvpMatrix, 0, projectionMatrix, 0, mvpMatrix, 0)
-
+    private fun drawPlanet(mvpMatrix: FloatArray, planet: BodyWithPosition) {
         GLES20.glUseProgram(programPlanets)
 
         val mvpMatrixHandle = GLES20.glGetUniformLocation(programPlanets, "uMVPMatrix")
