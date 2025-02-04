@@ -14,7 +14,7 @@ ksp = "2.1.0-1.0.29"
 ktor = "3.0.1"
 androidx-lifecycle = "2.8.4"
 decompose = "3.1.0"
-kotlinx-serialization = "1.7.3"
+kotlinx-serialization = "1.8.0"
 coil = "3.0.4"
 kotlinx-datetime = "0.6.1"
 

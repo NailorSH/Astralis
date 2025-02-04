@@ -1,6 +1,6 @@
 package com.nailorsh.astralis.core.di
 
-import com.nailorsh.astralis.core.data.remote.AstronomyApi
+import com.nailorsh.astralis.core.data.local.CelestialDataRepository
 import me.tatarka.inject.annotations.Provides
 import software.amazon.lastmile.kotlin.inject.anvil.AppScope
 import software.amazon.lastmile.kotlin.inject.anvil.MergeComponent
@@ -18,7 +18,7 @@ abstract class AppComponent(
     @get:[Provides SingleIn(AppScope::class)]
     protected val platformContext: PlatformContext
 ) {
-    abstract val astronomyApi: AstronomyApi
+    abstract val celestialDataRepository: CelestialDataRepository
 
     companion object {
         var appComponent: AppComponent by notNull()
