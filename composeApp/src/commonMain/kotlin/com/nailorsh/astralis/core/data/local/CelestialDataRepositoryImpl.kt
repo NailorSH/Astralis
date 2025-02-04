@@ -1,7 +1,7 @@
 package com.nailorsh.astralis.core.data.local
 
 import astralis.composeapp.generated.resources.Res
-import com.nailorsh.astralis.core.data.local.model.PlanetData
+import com.nailorsh.astralis.core.data.local.model.PlanetDataDto
 import kotlinx.serialization.json.Json
 import me.tatarka.inject.annotations.Inject
 import org.jetbrains.compose.resources.ExperimentalResourceApi
@@ -21,7 +21,7 @@ class CelestialDataRepositoryImpl : CelestialDataRepository {
     }
 
     @OptIn(ExperimentalResourceApi::class)
-    override suspend fun getPlanets(): Map<String, PlanetData> {
+    override suspend fun getPlanets(): Map<String, PlanetDataDto> {
         val bytes = Res.readBytes(PLANETS_DATA_PATH)
         val jsonString = bytes.decodeToString()
 

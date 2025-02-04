@@ -5,7 +5,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class PlanetData(
+data class PlanetDataDto(
     val name: String,
     @SerialName("absolute_magnitude") val absoluteMagnitude: Double? = null,
     val albedo: Double? = null,

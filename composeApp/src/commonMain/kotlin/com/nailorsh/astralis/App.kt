@@ -18,7 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import co.touchlab.kermit.Logger
-import com.nailorsh.astralis.core.data.local.model.PlanetData
+import com.nailorsh.astralis.core.data.local.model.PlanetDataDto
 import com.nailorsh.astralis.core.di.AppComponent
 import com.nailorsh.astralis.core.ui.theme.AppTheme
 
@@ -26,7 +26,7 @@ import com.nailorsh.astralis.core.ui.theme.AppTheme
 internal fun App() = AppTheme {
     val api = AppComponent.appComponent.celestialDataRepository
 
-    val list = remember { mutableStateListOf<PlanetData>() }
+    val list = remember { mutableStateListOf<PlanetDataDto>() }
     LaunchedEffect(Unit) {
         try {
             list.addAll(
