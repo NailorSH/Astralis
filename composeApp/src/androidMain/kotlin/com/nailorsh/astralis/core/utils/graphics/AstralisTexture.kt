@@ -25,6 +25,7 @@ import com.danielgergely.kgl.KglAndroid.bindTexture
 import com.danielgergely.kgl.KglAndroid.createTexture
 import com.danielgergely.kgl.KglAndroid.texParameteri
 import com.danielgergely.kgl.TextureResource
+import com.nailorsh.astralis.core.utils.getImageBitmap
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.decodeToImageBitmap
 
@@ -50,78 +51,78 @@ class AstralisTexture(private val bitmap: ImageBitmap) {
 
         id = textureHandle
     }
-}
 
-fun texImage2D(target: Int, level: Int, bitmap: ImageBitmap, border: Int = 0) {
-    val androidBitmap = bitmap.asAndroidBitmap()
-    GLUtils.texImage2D(target, level, androidBitmap, border)
-    androidBitmap.recycle()
-}
+    companion object {
+        fun texImage2D(target: Int, level: Int, bitmap: ImageBitmap, border: Int = 0) {
+            val androidBitmap = bitmap.asAndroidBitmap()
+            GLUtils.texImage2D(target, level, androidBitmap, border)
+            androidBitmap.recycle()
+        }
 
-fun loadTexture(context: Context, resourceId: Int): Int {
-    val textureHandle = createTexture()
+        fun loadTexture(context: Context, resourceId: Int): Int {
+            val textureHandle = createTexture()
 
-    if (textureHandle != 0) {
-        bindTexture(GL_TEXTURE_2D, textureHandle)
+            if (textureHandle != 0) {
+                bindTexture(GL_TEXTURE_2D, textureHandle)
 
-        texParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
-        texParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
-        texParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
-        texParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
+                texParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+                texParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+                texParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
+                texParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
 
-        val bitmap = getBitmapByRes(context, resourceId)
-        GLUtils.texImage2D(GL_TEXTURE_2D, 0, bitmap, 0)
-        bitmap.recycle()
+                val bitmap = getBitmapByRes(context, resourceId)
+                GLUtils.texImage2D(GL_TEXTURE_2D, 0, bitmap, 0)
+                bitmap.recycle()
 
-        bindTexture(GL_TEXTURE_2D, null)
+                bindTexture(GL_TEXTURE_2D, null)
+            }
+
+            return textureHandle
+        }
+
+        fun getInternalFormat(imageBitmap: ImageBitmap): Int {
+            return when (imageBitmap.config) {
+                ImageBitmapConfig.Alpha8 -> GL_ALPHA
+                ImageBitmapConfig.Argb8888, ImageBitmapConfig.F16 -> GL_RGBA
+                ImageBitmapConfig.Rgb565 -> GL_RGB
+                else -> throw IllegalArgumentException("Unknown internalformat: ${imageBitmap.config}")
+            }
+        }
+
+        fun getType(imageBitmap: ImageBitmap): Int = when (imageBitmap.config) {
+            ImageBitmapConfig.Rgb565 -> GL_UNSIGNED_SHORT_5_6_5
+            ImageBitmapConfig.Alpha8, ImageBitmapConfig.Argb8888 -> GL_UNSIGNED_BYTE
+            else -> GL_UNSIGNED_BYTE
+        }
+
+        @OptIn(ExperimentalResourceApi::class)
+        suspend fun getTextureResourceByPath(path: String): TextureResource {
+            val bytes = Res.readBytes("$TEXTURES_PATH/$path")
+            val image = bytes.decodeToImageBitmap()
+
+            val format = getInternalFormat(image)
+            val type = getType(image)
+
+            return TextureResource(
+                image.width,
+                image.height,
+                format,
+                type,
+                ByteBuffer(bytes)
+            )
+        }
+
+        suspend fun getImageBitmapByPath(path: String): ImageBitmap {
+            return getImageBitmap("$TEXTURES_PATH/$path")
+        }
+
+        suspend fun getBitmapByPath(path: String): Bitmap {
+            val image = getImageBitmapByPath(path)
+            return image.asAndroidBitmap()
+        }
+
+        fun getBitmapByRes(context: Context, resourceId: Int): Bitmap {
+            return BitmapFactory.decodeResource(context.resources, resourceId)
+        }
     }
-
-    return textureHandle
-}
-
-fun getInternalFormat(imageBitmap: ImageBitmap): Int {
-    return when (imageBitmap.config) {
-        ImageBitmapConfig.Alpha8 -> GL_ALPHA
-        ImageBitmapConfig.Argb8888, ImageBitmapConfig.F16 -> GL_RGBA
-        ImageBitmapConfig.Rgb565 -> GL_RGB
-        else -> throw IllegalArgumentException("Unknown internalformat: ${imageBitmap.config}")
-    }
-}
-
-fun getType(imageBitmap: ImageBitmap): Int = when (imageBitmap.config) {
-    ImageBitmapConfig.Rgb565 -> GL_UNSIGNED_SHORT_5_6_5
-    ImageBitmapConfig.Alpha8, ImageBitmapConfig.Argb8888 -> GL_UNSIGNED_BYTE
-    else -> GL_UNSIGNED_BYTE
-}
-
-@OptIn(ExperimentalResourceApi::class)
-suspend fun getTextureResourceByPath(path: String): TextureResource {
-    val bytes = Res.readBytes("$TEXTURES_PATH/$path")
-    val image = bytes.decodeToImageBitmap()
-
-    val format = getInternalFormat(image)
-    val type = getType(image)
-
-    return TextureResource(
-        image.width,
-        image.height,
-        format,
-        type,
-        ByteBuffer(bytes)
-    )
-}
-
-@OptIn(ExperimentalResourceApi::class)
-suspend fun getImageBitmapByPath(path: String): ImageBitmap {
-    val bytes = Res.readBytes("$TEXTURES_PATH/$path")
-    return bytes.decodeToImageBitmap()
-}
-
-suspend fun getBitmapByPath(path: String): Bitmap {
-    val image = getImageBitmapByPath(path)
-    return image.asAndroidBitmap()
-}
-
-fun getBitmapByRes(context: Context, resourceId: Int): Bitmap {
-    return BitmapFactory.decodeResource(context.resources, resourceId)
 }
