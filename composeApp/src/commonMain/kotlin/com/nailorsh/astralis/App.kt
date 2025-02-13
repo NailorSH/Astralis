@@ -6,7 +6,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import com.arkivanov.decompose.extensions.compose.stack.animation.LocalStackAnimationProvider
 import com.nailorsh.astralis.core.ui.theme.AppTheme
-import com.nailorsh.astralis.core.ui.utils.RepetOnStackAnimationProvider
+import com.nailorsh.astralis.core.ui.utils.AstralisStackAnimationProvider
 import com.nailorsh.astralis.features.root.api.LocalRootNavigation
 import com.nailorsh.astralis.features.root.api.RootDecomposeComponent
 
@@ -14,7 +14,7 @@ import com.nailorsh.astralis.features.root.api.RootDecomposeComponent
 internal fun App(rootComponent: RootDecomposeComponent) = AppTheme {
     CompositionLocalProvider(
         LocalRootNavigation provides rootComponent,
-        LocalStackAnimationProvider provides RepetOnStackAnimationProvider
+        LocalStackAnimationProvider provides AstralisStackAnimationProvider
     ) {
         rootComponent.Render(
             Modifier.fillMaxSize()
