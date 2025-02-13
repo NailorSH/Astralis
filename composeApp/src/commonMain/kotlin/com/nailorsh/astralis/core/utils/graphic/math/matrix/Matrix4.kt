@@ -1,22 +1,25 @@
 package com.nailorsh.astralis.core.utils.graphic.math.matrix
 
+import com.nailorsh.astralis.core.utils.graphic.math.vector.Vector3
 import com.nailorsh.astralis.core.utils.graphic.math.vector.Vector4
+import kotlin.math.cos
+import kotlin.math.sin
 
 typealias Mat4d = Matrix4<Double>
 typealias Mat4f = Matrix4<Float>
 
 class Matrix4<T : Number> {
-    private val array: MutableList<Double> = MutableList(16) { 0.0 }
+    val array: MutableList<Double> = MutableList(16) { 0.0 }
 
     constructor() {
         setIdentity()
     }
 
     constructor(
-        m00: T, m01: T, m02: T, m03: T,
-        m10: T, m11: T, m12: T, m13: T,
-        m20: T, m21: T, m22: T, m23: T,
-        m30: T, m31: T, m32: T, m33: T
+        m00: Number, m01: Number, m02: Number, m03: Number,
+        m10: Number, m11: Number, m12: Number, m13: Number,
+        m20: Number, m21: Number, m22: Number, m23: Number,
+        m30: Number, m31: Number, m32: Number, m33: Number
     ) {
         set(m00, m01, m02, m03, m10, m11, m12, m13, m20, m21, m22, m23, m30, m31, m32, m33)
     }
@@ -130,13 +133,18 @@ class Matrix4<T : Number> {
         return res
     }
 
-    operator fun times(vec: Vector4<T>): Vector4<Double> =
-        Vector4(
-            array[0] * vec.x.toDouble() + array[1] * vec.y.toDouble() + array[2] * vec.z.toDouble() + array[3] * vec.w.toDouble(),
-            array[4] * vec.x.toDouble() + array[5] * vec.y.toDouble() + array[6] * vec.z.toDouble() + array[7] * vec.w.toDouble(),
-            array[8] * vec.x.toDouble() + array[9] * vec.y.toDouble() + array[10] * vec.z.toDouble() + array[11] * vec.w.toDouble(),
-            array[12] * vec.x.toDouble() + array[13] * vec.y.toDouble() + array[14] * vec.z.toDouble() + array[15] * vec.w.toDouble()
-        )
+    operator fun times(vec: Vector4<T>): Vector4<Double> = Vector4(
+        array[0] * vec.x.toDouble() + array[1] * vec.y.toDouble() + array[2] * vec.z.toDouble() + array[3] * vec.w.toDouble(),
+        array[4] * vec.x.toDouble() + array[5] * vec.y.toDouble() + array[6] * vec.z.toDouble() + array[7] * vec.w.toDouble(),
+        array[8] * vec.x.toDouble() + array[9] * vec.y.toDouble() + array[10] * vec.z.toDouble() + array[11] * vec.w.toDouble(),
+        array[12] * vec.x.toDouble() + array[13] * vec.y.toDouble() + array[14] * vec.z.toDouble() + array[15] * vec.w.toDouble()
+    )
+
+    operator fun times(vec: Vector3<T>): Vector3<Double> = Vector3(
+        array[0] * vec.x.toDouble() + array[4] * vec.y.toDouble() + array[8] * vec.z.toDouble() + array[12],
+        array[1] * vec.x.toDouble() + array[5] * vec.y.toDouble() + array[9] * vec.z.toDouble() + array[13],
+        array[2] * vec.x.toDouble() + array[6] * vec.y.toDouble() + array[10] * vec.z.toDouble() + array[14]
+    )
 
     fun transpose(): Matrix4<Double> =
         Matrix4(
@@ -155,6 +163,14 @@ class Matrix4<T : Number> {
 
     fun upper3x3Transposed(): Matrix3<Double> = upper3x3().transpose()
 
+    fun multiplyWithoutTranslation(a: Vector3<T>): Vector3<Double> {
+        return Vector3(
+            array[0] * a.x.toDouble() + array[4] * a.y.toDouble() + array[8] * a.z.toDouble(),
+            array[1] * a.x.toDouble() + array[5] * a.y.toDouble() + array[9] * a.z.toDouble(),
+            array[2] * a.x.toDouble() + array[6] * a.y.toDouble() + array[10] * a.z.toDouble()
+        )
+    }
+
     fun toDoubleArray(): DoubleArray = array.toDoubleArray()
     fun toFloatArray(): FloatArray = array.map { it.toFloat() }.toFloatArray()
     fun toIntArray(): IntArray = array.map { it.toInt() }.toIntArray()
@@ -172,5 +188,56 @@ class Matrix4<T : Number> {
             0.0, 0.0, 1.0, 0.0,
             0.0, 0.0, 0.0, 1.0
         )
+
+        fun translation(vector: Vector3<*>): Matrix4<Double> {
+            return Matrix4(
+                1, 0, 0, 0,
+                0, 1, 0, 0,
+                0, 0, 1, 0,
+                vector.x, vector.y, vector.z, 1
+            )
+        }
+
+        fun xRotation(angle: Double): Matrix4<Double> {
+            val c = cos(angle)
+            val s = sin(angle)
+
+            return Matrix4(
+                arrayOf(
+                    1.0, 0.0, 0.0, 0.0,
+                    0.0, c, s, 0.0,
+                    0.0, -s, c, 0.0,
+                    0.0, 0.0, 0.0, 1.0
+                )
+            )
+        }
+
+        fun yRotation(angle: Double): Matrix4<Double> {
+            val c = cos(angle)
+            val s = sin(angle)
+
+            return Matrix4(
+                arrayOf(
+                    c, 0.0, -s, 0.0,
+                    0.0, 1.0, 0.0, 0.0,
+                    s, 0.0, c, 0.0,
+                    0.0, 0.0, 0.0, 1.0
+                )
+            )
+        }
+
+        fun zRotation(angle: Double): Matrix4<Double> {
+            val c = cos(angle)
+            val s = sin(angle)
+
+            return Matrix4(
+                arrayOf(
+                    c, s, 0.0, 0.0,
+                    -s, c, 0.0, 0.0,
+                    0.0, 0.0, 1.0, 0.0,
+                    0.0, 0.0, 0.0, 1.0
+                )
+            )
+        }
     }
 }

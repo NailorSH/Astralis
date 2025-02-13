@@ -57,6 +57,8 @@ kotlin {
 
             // KGL
             implementation(libs.kgl)
+
+            implementation("com.mayakapps.kache:kache:2.1.0")
         }
 
         commonTest.dependencies {

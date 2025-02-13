@@ -1,5 +1,6 @@
 package com.nailorsh.astralis.core.utils.graphic.math.vector
 
+import com.nailorsh.astralis.core.utils.graphic.math.matrix.Mat4d
 import kotlin.math.PI
 import kotlin.math.asin
 import kotlin.math.atan2
@@ -15,7 +16,8 @@ class Vector3<T : Number>(
     var y: T,
     var z: T
 ) {
-    constructor(value: T) : this(value, value, value)
+    @Suppress("UNCHECKED_CAST")
+    constructor(value: T = 0 as T) : this(value, value, value)
 
     constructor(arr: Array<T>) : this(arr[0], arr[1], arr[2])
 
@@ -42,6 +44,26 @@ class Vector3<T : Number>(
         y.toDouble() * scalar.toDouble(),
         z.toDouble() * scalar.toDouble()
     )
+
+    operator fun times(vector: Vector3<T>): Double {
+        val x1 = x.toDouble()
+        val y1 = y.toDouble()
+        val z1 = z.toDouble()
+        val x2 = vector.x.toDouble()
+        val y2 = vector.y.toDouble()
+        val z2 = vector.z.toDouble()
+
+        return x1 * x2 + y1 * y2 + z1 * z2
+    }
+
+
+    private fun toNumberType(value: T) {
+        when (value) {
+            is Double -> value.toDouble()
+            is Float -> value.toFloat()
+            is Int -> value.toInt()
+        }
+    }
 
     operator fun div(scalar: T): Vector3<Double> = Vector3(
         x.toDouble() / scalar.toDouble(),
@@ -77,9 +99,36 @@ class Vector3<T : Number>(
 
     fun longitude(): Double = atan2(y.toDouble(), x.toDouble())
 
+//    template<class T> void Vector3<T>::transfo4d(const Mat4d& m)
+//    {
+//        const T v0 = v[0];
+//        const T v1 = v[1];
+//        v[0]=m.r[0]*v0 + m.r[4]*v1 + m.r[8]*v[2] + m.r[12];
+//        v[1]=m.r[1]*v0 + m.r[5]*v1 +  m.r[9]*v[2] + m.r[13];
+//        v[2]=m.r[2]*v0 + m.r[6]*v1 + m.r[10]*v[2] + m.r[14];
+//    }
+
+    @Suppress("UNCHECKED_CAST")
+    fun transfo4d(matrix: Mat4d) {
+        val tempX = x.toDouble()
+        val tempY = y.toDouble()
+        val tempZ = z.toDouble()
+
+        x =
+            (matrix.array[0] * tempX + matrix.array[4] * tempY + matrix.array[8] * tempZ + matrix.array[12]) as T
+        y =
+            (matrix.array[1] * tempX + matrix.array[5] * tempY + matrix.array[9] * tempZ + matrix.array[13]) as T
+        z =
+            (matrix.array[2] * tempX + matrix.array[6] * tempY + matrix.array[10] * tempZ + matrix.array[14]) as T
+    }
+
+
     fun toDoubleArray(): DoubleArray = doubleArrayOf(x.toDouble(), y.toDouble(), z.toDouble())
     fun toFloatArray(): FloatArray = floatArrayOf(x.toFloat(), y.toFloat(), z.toFloat())
     fun toIntArray(): IntArray = intArrayOf(x.toInt(), y.toInt(), z.toInt())
+
+    fun toVec3d(): Vec3d = Vec3d(x.toDouble(), y.toDouble(), z.toDouble())
+    fun toVec3f(): Vec3f = Vec3f(x.toFloat(), y.toFloat(), z.toFloat())
 
     override fun toString(): String = "[$x, $y, $z]"
 }
