@@ -1,6 +1,5 @@
 package com.nailorsh.astralis.features.home.impl.presentation.ui.components
 
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
@@ -14,6 +13,6 @@ actual fun SpaceScreen(
 ) {
     AndroidView(
         factory = { ctx -> SpaceView(ctx, planets) },
-        modifier = Modifier.fillMaxSize()
+        modifier = modifier
     )
 }

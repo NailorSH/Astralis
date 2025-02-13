@@ -159,11 +159,11 @@ compose.desktop {
 
 tasks.register("buildComposeResources") {
     dependsOn(
-        ":shared:generateComposeResClass",
-        ":shared:generateExpectResourceCollectorsForCommonMain",
-        ":shared:convertXmlValueResourcesForCommonMain",
-        ":shared:copyNonXmlValueResourcesForCommonMain",
-        ":shared:prepareComposeResourcesTaskForCommonMain",
-        ":shared:generateResourceAccessorsForCommonMain"
+        ":composeApp:generateComposeResClass",
+        ":composeApp:generateExpectResourceCollectorsForCommonMain",
+        ":composeApp:convertXmlValueResourcesForCommonMain",
+        ":composeApp:copyNonXmlValueResourcesForCommonMain",
+        ":composeApp:prepareComposeResourcesTaskForCommonMain",
+        ":composeApp:generateResourceAccessorsForCommonMain"
     )
 }
