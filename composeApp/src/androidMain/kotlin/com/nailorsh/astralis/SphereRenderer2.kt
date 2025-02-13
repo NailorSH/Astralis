@@ -480,7 +480,7 @@ class SphereRenderer2(
                 val deltaY = event.y - previousY
 
                 // Обновляем углы камеры
-                val sensitivity = 0.5f
+                val sensitivity = 0.075f
                 azimuth += deltaX * sensitivity
                 altitude -= deltaY * sensitivity
 
