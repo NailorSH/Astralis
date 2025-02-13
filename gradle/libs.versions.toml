@@ -13,7 +13,9 @@ kotlinx-coroutines = "1.9.0"
 ksp = "2.1.0-1.0.29"
 ktor = "3.0.1"
 androidx-lifecycle = "2.8.4"
+lifecycleViewmodelCompose = "2.8.2"
 decompose = "3.1.0"
+essenty = "2.2.1"
 kotlinx-serialization = "1.8.0"
 coil = "3.0.4"
 kotlinx-datetime = "0.6.1"
@@ -54,8 +56,17 @@ ktor-client-js = { module = "io.ktor:ktor-client-js", version.ref = "ktor" }
 
 androidx-lifecycle-viewmodel = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel", version.ref = "androidx-lifecycle" }
 androidx-lifecycle-runtime-compose = { module = "org.jetbrains.androidx.lifecycle:lifecycle-runtime-compose", version.ref = "androidx-lifecycle" }
+jetbrains-lifecycle-viewmodel-compose = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycleViewmodelCompose" }
+
+
+# Decompose
 decompose = { module = "com.arkivanov.decompose:decompose", version.ref = "decompose" }
 decompose-compose = { module = "com.arkivanov.decompose:extensions-compose", version.ref = "decompose" }
+
+# Essenty
+essenty-lifecycle = { module = "com.arkivanov.essenty:lifecycle", version.ref = "essenty" }
+essenty-lifecycle-coroutines = { module = "com.arkivanov.essenty:lifecycle-coroutines", version.ref = "essenty" }
+
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
 coil = { module = "io.coil-kt.coil3:coil-compose-core", version.ref = "coil" }
 coil-network-ktor = { module = "io.coil-kt.coil3:coil-network-ktor3", version.ref = "coil" }
@@ -69,3 +80,7 @@ compose = { id = "org.jetbrains.compose", version.ref = "compose" }
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlinx-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+
+[bundles]
+
+essenty = ["essenty-lifecycle", "essenty-lifecycle-coroutines"]

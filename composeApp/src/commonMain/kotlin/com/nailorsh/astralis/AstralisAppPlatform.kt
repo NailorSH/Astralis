@@ -1,5 +1,6 @@
 package com.nailorsh.astralis
 
+import com.danielgergely.kgl.Kgl
 import com.nailorsh.astralis.core.di.AppComponent
 import com.nailorsh.astralis.core.di.PlatformContext
 import kotlin.properties.Delegates.notNull
@@ -9,8 +10,9 @@ class AstralisAppPlatform {
         private set
 
     fun start(
-        platformContext: PlatformContext
+        platformContext: PlatformContext,
+        kgl: Kgl
     ) {
-        appComponent = AppComponent.create(platformContext)
+        appComponent = AppComponent.create(platformContext, kgl)
     }
 }

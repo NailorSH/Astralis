@@ -55,6 +55,10 @@ kotlin {
             implementation(libs.kotlinInject.anvil.runtime)
             implementation(libs.kotlinInject.anvil.runtime.optional)
 
+            // Lifecycle
+            implementation(libs.bundles.essenty)
+            implementation(libs.jetbrains.lifecycle.viewmodel.compose)
+
             // KGL
             implementation(libs.kgl)
 

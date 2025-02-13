@@ -1,6 +1,7 @@
 package com.nailorsh.astralis
 
 import android.app.Application
+import com.danielgergely.kgl.KglAndroid
 
 class AstralisApplication @JvmOverloads constructor(
     private val platform: AstralisAppPlatform = AstralisAppPlatform()
@@ -9,6 +10,7 @@ class AstralisApplication @JvmOverloads constructor(
         super.onCreate()
         platform.start(
             platformContext = this,
+            kgl = KglAndroid
         )
     }
 }

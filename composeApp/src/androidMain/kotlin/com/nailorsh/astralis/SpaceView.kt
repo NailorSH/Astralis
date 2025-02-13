@@ -9,6 +9,7 @@ import android.view.ScaleGestureDetector
 import co.touchlab.kermit.Logger
 import com.nailorsh.astralis.core.utils.graphics.compileShader
 import com.nailorsh.astralis.core.utils.graphics.createProgram
+import com.nailorsh.astralis.features.home.impl.presentation.data.model.BodyWithPosition
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
 import kotlin.math.cos

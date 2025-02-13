@@ -4,6 +4,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
+import com.danielgergely.kgl.KglLwjgl
 import com.nailorsh.astralis.App
 import com.nailorsh.astralis.AstralisAppPlatform
 import com.nailorsh.astralis.core.di.PlatformContext
@@ -13,6 +14,7 @@ fun main() = application {
     val platform = AstralisAppPlatform()
     platform.start(
         platformContext = object : PlatformContext() {},
+        kgl = KglLwjgl
     )
 
     Window(

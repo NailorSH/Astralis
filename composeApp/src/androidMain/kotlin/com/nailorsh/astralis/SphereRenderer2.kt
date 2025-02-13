@@ -8,9 +8,9 @@ import android.opengl.Matrix
 import android.view.GestureDetector
 import android.view.MotionEvent
 import co.touchlab.kermit.Logger
-import com.nailorsh.astralis.core.utils.graphics.AstralisTexture
 import com.nailorsh.astralis.core.utils.graphics.compileShader
 import com.nailorsh.astralis.core.utils.graphics.createProgram
+import com.nailorsh.astralis.features.home.impl.presentation.data.model.BodyWithPosition
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.FloatBuffer
@@ -74,14 +74,6 @@ val fragmentShaderPlanets = """
     }
 
 """.trimIndent()
-
-data class BodyWithPosition(
-    val id: String,
-    val azimuthDegrees: Double,
-    val altitudeDegrees: Double,
-    val distanceFromEarthAU: Double,
-    val texture: AstralisTexture
-)
 
 class SphereRenderer2(
     private val context: Context,
@@ -325,7 +317,7 @@ class SphereRenderer2(
             texCoordBuffer
         )
 
-        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, planet.texture.id)
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, planet.texture.id ?: 0)
 
         GLES20.glDrawElements(
             GLES20.GL_TRIANGLES,
