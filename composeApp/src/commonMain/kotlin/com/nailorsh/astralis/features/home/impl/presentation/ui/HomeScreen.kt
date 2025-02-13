@@ -11,11 +11,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.nailorsh.astralis.core.ui.components.LoadingBox
 import com.nailorsh.astralis.features.home.impl.presentation.data.model.BodyWithPosition
-import com.nailorsh.astralis.features.home.impl.presentation.viewmodel.MainState
+import com.nailorsh.astralis.features.home.impl.presentation.viewmodel.HomeState
 
 @Composable
 fun HomeScreen(
-    state: MainState,
+    state: HomeState,
     modifier: Modifier = Modifier
 ) {
     if (state.isLoading) {
@@ -32,7 +32,7 @@ fun HomeScreen(
 
 @Composable
 fun HomeScreenContent(
-    state: MainState,
+    state: HomeState,
     modifier: Modifier = Modifier
 ) {
     Box(

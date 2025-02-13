@@ -2,4 +2,4 @@ package com.nailorsh.astralis.features.home.impl.presentation.viewmodel
 
 import com.nailorsh.astralis.core.arch.Action
 
-sealed interface MainAction : Action
+sealed interface HomeAction : Action

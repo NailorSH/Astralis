@@ -14,17 +14,17 @@ import kotlinx.coroutines.withContext
 import me.tatarka.inject.annotations.Inject
 
 @Inject
-class MainViewModel(
+class HomeViewModel(
     private val astralisTexture: (bitmap: ImageBitmap) -> AstralisTexture
-) : BaseViewModel<MainAction, MainState>() {
-    private val _state = MutableStateFlow(MainState())
+) : BaseViewModel<HomeAction, HomeState>() {
+    private val _state = MutableStateFlow(HomeState())
     override val state = _state.asStateFlow()
 
     init {
         loadPlanets()
     }
 
-    override fun onAction(action: MainAction) {
+    override fun onAction(action: HomeAction) {
         viewModelScope.launch {
 
         }
