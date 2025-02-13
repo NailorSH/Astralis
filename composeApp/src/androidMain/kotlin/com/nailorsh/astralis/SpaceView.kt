@@ -14,12 +14,12 @@ import javax.microedition.khronos.opengles.GL10
 import kotlin.math.cos
 import kotlin.math.sin
 
-class SpaceView(context: Context) : GLSurfaceView(context) {
+class SpaceView(context: Context, planets: List<BodyWithPosition>) : GLSurfaceView(context) {
     private val renderer: SphereRenderer2
 
     init {
         setEGLContextClientVersion(2)
-        renderer = SphereRenderer2(context)
+        renderer = SphereRenderer2(context, planets)
         setRenderer(renderer)
         renderMode = RENDERMODE_CONTINUOUSLY
     }

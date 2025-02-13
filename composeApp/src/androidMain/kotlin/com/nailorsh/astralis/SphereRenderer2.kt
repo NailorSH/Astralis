@@ -8,9 +8,9 @@ import android.opengl.Matrix
 import android.view.GestureDetector
 import android.view.MotionEvent
 import co.touchlab.kermit.Logger
+import com.nailorsh.astralis.core.utils.graphics.AstralisTexture
 import com.nailorsh.astralis.core.utils.graphics.compileShader
 import com.nailorsh.astralis.core.utils.graphics.createProgram
-import com.nailorsh.astralis.core.utils.graphics.loadTexture
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.FloatBuffer
@@ -80,10 +80,13 @@ data class BodyWithPosition(
     val azimuthDegrees: Double,
     val altitudeDegrees: Double,
     val distanceFromEarthAU: Double,
-    val textureId: Int
+    val texture: AstralisTexture
 )
 
-class SphereRenderer2(private val context: Context) : GLSurfaceView.Renderer {
+class SphereRenderer2(
+    private val context: Context,
+    private val planets: List<BodyWithPosition>
+) : GLSurfaceView.Renderer {
     private val gestureDetector = GestureDetector(
         context,
         object : GestureDetector.SimpleOnGestureListener() {
@@ -110,8 +113,6 @@ class SphereRenderer2(private val context: Context) : GLSurfaceView.Renderer {
 
     private var useTexSky = false
     private var wireframeMode = true // Флаг для режима wireframe
-
-    private val planets = mutableListOf<BodyWithPosition>()
 
     private var azimuth = 0f // Угол поворота влево-вправо
     private var altitude = 0f // Угол поворота вверх-вниз
@@ -140,80 +141,7 @@ class SphereRenderer2(private val context: Context) : GLSurfaceView.Renderer {
         GLES20.glClearColor(0.1f, 0.1f, 0.1f, 1f)
         GLES20.glEnable(GLES20.GL_DEPTH_TEST)
 
-        planets.addAll(
-            listOf(
-                BodyWithPosition(
-                    id = "sun",
-                    azimuthDegrees = 86.98,
-                    altitudeDegrees = -30.30,
-                    distanceFromEarthAU = 0.98356,
-                    textureId = loadTexture(context, R.drawable.sun)
-                ),
-//                BodyWithPosition(
-//                    id = "moon",
-//                    azimuthDegrees = 138.79,
-//                    altitudeDegrees = 12.93,
-//                    distanceFromEarthAU = 0.00269,
-//                    textureId = loadTexture(context, R.drawable.moon)
-//                ),
-                BodyWithPosition(
-                    id = "mercury",
-                    azimuthDegrees = 103.87,
-                    altitudeDegrees = -14.48,
-                    distanceFromEarthAU = 1.01530,
-                    textureId = loadTexture(context, R.drawable.mercury)
-                ),
-                BodyWithPosition(
-                    id = "venus",
-                    azimuthDegrees = 29.51,
-                    altitudeDegrees = -47.52,
-                    distanceFromEarthAU = 0.80160,
-                    textureId = loadTexture(context, R.drawable.venus)
-                ),
-                BodyWithPosition(
-                    id = "mars",
-                    azimuthDegrees = 233.92,
-                    altitudeDegrees = 47.67,
-                    distanceFromEarthAU = 0.67816,
-                    textureId = loadTexture(context, R.drawable.mars)
-                ),
-                BodyWithPosition(
-                    id = "jupiter",
-                    azimuthDegrees = 283.23,
-                    altitudeDegrees = 17.62,
-                    distanceFromEarthAU = 4.14377,
-                    textureId = loadTexture(context, R.drawable.jupiter)
-                ),
-                BodyWithPosition(
-                    id = "saturn",
-                    azimuthDegrees = 356.39,
-                    altitudeDegrees = -41.98,
-                    distanceFromEarthAU = 9.91938,
-                    textureId = loadTexture(context, R.drawable.saturn)
-                ),
-                BodyWithPosition(
-                    id = "uranus",
-                    azimuthDegrees = 298.12,
-                    altitudeDegrees = 3.83,
-                    distanceFromEarthAU = 18.78885,
-                    textureId = loadTexture(context, R.drawable.uranus)
-                ),
-                BodyWithPosition(
-                    id = "neptune",
-                    azimuthDegrees = 342.05,
-                    altitudeDegrees = -34.85,
-                    distanceFromEarthAU = 29.98838,
-                    textureId = loadTexture(context, R.drawable.neptune)
-                ),
-                BodyWithPosition(
-                    id = "pluto",
-                    azimuthDegrees = 58.05,
-                    altitudeDegrees = -46.08,
-                    distanceFromEarthAU = 36.03690,
-                    textureId = loadTexture(context, R.drawable.pluto)
-                ),
-            )
-        )
+        planets.forEach { it.texture.load() }
 
         programSkySphere = initializeShaderProgram(
             vertexShaderSkySphere,
@@ -223,7 +151,7 @@ class SphereRenderer2(private val context: Context) : GLSurfaceView.Renderer {
 
         // Загрузка текстуры
         // https://www.flickr.com/photos/nasawebbtelescope/54183500660/
-        textureId = loadTexture(context, R.drawable.space)
+//        textureId = loadTexture(context, R.drawable.space)
 
         // Генерация данных сферы
         generateSphereData(40, 40)
@@ -346,9 +274,9 @@ class SphereRenderer2(private val context: Context) : GLSurfaceView.Renderer {
             val y = sin(altitudeRadians) * distanceMultiplier
             val z = cos(altitudeRadians) * cos(azimuthRadians) * distanceMultiplier
 
-            Logger.d("PlanetPosition") {
-                "Planet ${planet.id}: x=$x, y=$y, z=$z"
-            }
+//            Logger.d("PlanetPosition") {
+//                "Planet ${planet.id}: x=$x, y=$y, z=$z"
+//            }
 
             // Устанавливаем позицию планеты в пространстве
             val position = floatArrayOf(x.toFloat(), y.toFloat(), z.toFloat())
@@ -397,7 +325,7 @@ class SphereRenderer2(private val context: Context) : GLSurfaceView.Renderer {
             texCoordBuffer
         )
 
-        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, planet.textureId)
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, planet.texture.id)
 
         GLES20.glDrawElements(
             GLES20.GL_TRIANGLES,
