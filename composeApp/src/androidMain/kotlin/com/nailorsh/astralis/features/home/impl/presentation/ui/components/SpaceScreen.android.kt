@@ -1,4 +1,4 @@
-package com.nailorsh.astralis.features.home.impl.presentation.ui
+package com.nailorsh.astralis.features.home.impl.presentation.ui.components
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable

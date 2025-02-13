@@ -10,7 +10,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.nailorsh.astralis.core.ui.components.LoadingBox
-import com.nailorsh.astralis.features.home.impl.presentation.data.model.BodyWithPosition
+import com.nailorsh.astralis.features.home.impl.presentation.ui.components.SpaceScreen
 import com.nailorsh.astralis.features.home.impl.presentation.viewmodel.HomeState
 
 @Composable
@@ -50,9 +50,3 @@ fun HomeScreenContent(
         }
     }
 }
-
-@Composable
-expect fun SpaceScreen(
-    planets: List<BodyWithPosition>,
-    modifier: Modifier = Modifier
-)
