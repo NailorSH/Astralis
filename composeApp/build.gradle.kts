@@ -94,6 +94,10 @@ kotlin {
         jsMain.dependencies {
             implementation(compose.html.core)
             implementation(libs.ktor.client.js)
+
+            implementation(project.dependencies.enforcedPlatform(libs.kotlin.wrappers.bom))
+            implementation(libs.kotlin.wrappers.browser)
+            implementation(libs.kotlin.wrappers.web)
         }
     }
 }
@@ -151,4 +155,15 @@ compose.desktop {
             }
         }
     }
+}
+
+tasks.register("buildComposeResources") {
+    dependsOn(
+        ":shared:generateComposeResClass",
+        ":shared:generateExpectResourceCollectorsForCommonMain",
+        ":shared:convertXmlValueResourcesForCommonMain",
+        ":shared:copyNonXmlValueResourcesForCommonMain",
+        ":shared:prepareComposeResourcesTaskForCommonMain",
+        ":shared:generateResourceAccessorsForCommonMain"
+    )
 }

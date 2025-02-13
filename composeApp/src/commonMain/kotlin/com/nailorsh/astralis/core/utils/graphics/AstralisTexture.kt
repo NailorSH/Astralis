@@ -34,7 +34,7 @@ class AstralisTexture(
             kgl.texParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
             kgl.texParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
 
-            texImage2D(GL_TEXTURE_2D, 0, bitmap)
+            kgl.texImage2D(GL_TEXTURE_2D, 0, bitmap)
             kgl.bindTexture(GL_TEXTURE_2D, null)
         }
 
@@ -48,4 +48,4 @@ class AstralisTexture(
     }
 }
 
-expect fun texImage2D(target: Int, level: Int, bitmap: ImageBitmap, border: Int = 0)
+expect fun Kgl.texImage2D(target: Int, level: Int, bitmap: ImageBitmap, border: Int = 0)
