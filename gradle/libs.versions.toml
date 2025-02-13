@@ -1,7 +1,7 @@
 [versions]
 
 kgl = "0.6.3"
-kotlin = "2.1.0"
+kotlin = "2.1.10"
 compose = "1.7.1"
 agp = "8.6.1"
 androidx-activityCompose = "1.9.3"
@@ -10,7 +10,7 @@ kermit = "2.0.5"
 kotlinInject = "0.7.2"
 kotlinInject-anvil = "0.1.1"
 kotlinx-coroutines = "1.9.0"
-ksp = "2.1.0-1.0.29"
+ksp = "2.1.10-1.0.29"
 ktor = "3.0.1"
 androidx-lifecycle = "2.8.4"
 lifecycleViewmodelCompose = "2.8.2"

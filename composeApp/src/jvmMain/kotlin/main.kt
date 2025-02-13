@@ -1,12 +1,13 @@
-import androidx.compose.desktop.ui.tooling.preview.Preview
-import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
+import com.arkivanov.decompose.DefaultComponentContext
+import com.arkivanov.essenty.lifecycle.LifecycleRegistry
 import com.danielgergely.kgl.KglLwjgl
 import com.nailorsh.astralis.App
 import com.nailorsh.astralis.AstralisAppPlatform
+import com.nailorsh.astralis.core.di.AppComponent
 import com.nailorsh.astralis.core.di.PlatformContext
 import java.awt.Dimension
 
@@ -17,16 +18,18 @@ fun main() = application {
         kgl = KglLwjgl
     )
 
+    val lifecycle = LifecycleRegistry()
+
+    val root = AppComponent.appComponent.rootDecomposeComponentFactory(
+        DefaultComponentContext(lifecycle = lifecycle),
+    )
+
     Window(
         title = "Astralis",
         state = rememberWindowState(width = 800.dp, height = 600.dp),
         onCloseRequest = ::exitApplication,
     ) {
         window.minimumSize = Dimension(350, 600)
-        App()
+        App(root)
     }
 }
-
-@Preview
-@Composable
-fun AppPreview() { App() }

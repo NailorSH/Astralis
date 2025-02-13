@@ -11,7 +11,6 @@ import com.arkivanov.decompose.router.stack.StackNavigation
 import com.arkivanov.decompose.router.stack.childStack
 import com.arkivanov.decompose.router.stack.pop
 import com.arkivanov.decompose.router.stack.pushToFront
-import com.arkivanov.decompose.router.stack.replaceAll
 import com.arkivanov.decompose.router.stack.replaceCurrent
 import com.arkivanov.decompose.value.Value
 import com.nailorsh.astralis.core.decompose.DecomposeComponent
@@ -29,10 +28,6 @@ class RootDecomposeComponentImpl(
     @Assisted componentContext: ComponentContext,
     private val homeScreenDecomposeComponentFactory: HomeScreenDecomposeComponent.Factory,
 ) : RootDecomposeComponent, ComponentContext by componentContext {
-    init {
-        getDefaultStack()
-    }
-
     private val navigation = StackNavigation<RootScreenConfig>()
     private val stack: Value<ChildStack<RootScreenConfig, DecomposeComponent>> = childStack(
         source = navigation,
@@ -65,10 +60,6 @@ class RootDecomposeComponentImpl(
                 navigation::pop
             )
         }
-    }
-
-    private fun getDefaultStack() {
-        navigation.replaceAll(RootScreenConfig.Home)
     }
 
     private fun internalOnBack() {

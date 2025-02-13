@@ -38,7 +38,7 @@ fun HomeScreenContent(
     Box(
         modifier = modifier.fillMaxSize()
     ) {
-
+        SpaceScreen(state.planets)
 
         Button(
             onClick = { /* Действие */ },
