@@ -32,16 +32,6 @@ val vertexShaderSkySphere = """
     }
 """.trimIndent()
 
-val fragmentShaderSkySphere = """
-    precision mediump float;
-    uniform sampler2D uTexture; // Текстура
-    varying vec2 vTexCoord; // Текстурные координаты
-
-    void main() {
-        gl_FragColor = texture2D(uTexture, vTexCoord); // Получаем цвет из текстуры по текстурным координатам
-    }
-""".trimIndent()
-
 private val fragmentShaderSkySphereNoTexture = """
     precision mediump float;
     uniform vec4 uColor;
@@ -103,7 +93,6 @@ class SphereRenderer2(
         }
     )
 
-    private var useTexSky = false
     private var wireframeMode = true // Флаг для режима wireframe
 
     private var azimuth = 0f // Угол поворота влево-вправо
@@ -137,7 +126,7 @@ class SphereRenderer2(
 
         programSkySphere = initializeShaderProgram(
             vertexShaderSkySphere,
-            if (useTexSky) fragmentShaderSkySphere else fragmentShaderSkySphereNoTexture
+            fragmentShaderSkySphereNoTexture
         )
         programPlanets = initializeShaderProgram(vertexShaderPlanets, fragmentShaderPlanets)
 
@@ -205,28 +194,11 @@ class SphereRenderer2(
         GLES20.glEnableVertexAttribArray(positionHandle)
         GLES20.glVertexAttribPointer(positionHandle, 3, GLES20.GL_FLOAT, false, 5 * 4, vertexBuffer)
 
-        if (useTexSky) {
-            val texCoordHandle = GLES20.glGetAttribLocation(programSkySphere, "aTexCoord")
-            GLES20.glEnableVertexAttribArray(texCoordHandle)
-            val texCoordBuffer = vertexBuffer!!.duplicate()
-            texCoordBuffer.position(3)
-            GLES20.glVertexAttribPointer(
-                texCoordHandle,
-                2,
-                GLES20.GL_FLOAT,
-                false,
-                5 * 4,
-                texCoordBuffer
-            )
+        GLES20.glEnable(GLES20.GL_BLEND)
+        GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA)
 
-            GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureId)
-        } else {
-            GLES20.glEnable(GLES20.GL_BLEND)
-            GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA)
-
-            val colorHandle = GLES20.glGetUniformLocation(programSkySphere, "uColor")
-            GLES20.glUniform4f(colorHandle, 0f, 0f, 0f, 1f) // Устанавливаем цвет (прозрачный)
-        }
+        val colorHandle = GLES20.glGetUniformLocation(programSkySphere, "uColor")
+        GLES20.glUniform4f(colorHandle, 0f, 0f, 0f, 1f) // Устанавливаем цвет (прозрачный)
 
         if (wireframeMode) {
             GLES20.glDrawElements(
@@ -245,14 +217,6 @@ class SphereRenderer2(
         }
 
         GLES20.glDisableVertexAttribArray(positionHandle)
-        if (useTexSky) {
-            GLES20.glDisableVertexAttribArray(
-                GLES20.glGetAttribLocation(
-                    programSkySphere,
-                    "aTexCoord"
-                )
-            )
-        }
     }
 
     private fun renderPlanets() {
