@@ -17,6 +17,7 @@ import org.jetbrains.compose.resources.stringResource
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeTopBar(
+    isCameraOn: Boolean,
     onCameraClicked: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -28,7 +29,7 @@ fun HomeTopBar(
             containerColor = Color.Transparent
         ),
         actions = {
-            CameraButton(onCameraClicked)
+            CameraButton(isCameraOn, onCameraClicked)
         },
         scrollBehavior = scrollBehavior,
         windowInsets = WindowInsets(top = 16.dp),

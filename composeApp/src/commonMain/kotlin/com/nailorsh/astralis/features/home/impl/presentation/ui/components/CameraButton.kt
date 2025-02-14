@@ -8,14 +8,19 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import astralis.composeapp.generated.resources.Res
+import astralis.composeapp.generated.resources.ic_close_rounded
 import astralis.composeapp.generated.resources.ic_photo_camera_rounded
 import org.jetbrains.compose.resources.vectorResource
 
 @Composable
 fun CameraButton(
+    isCameraOn: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val buttonIcon =
+        if (isCameraOn) Res.drawable.ic_close_rounded else Res.drawable.ic_photo_camera_rounded
+
     IconButton(
         onClick = onClick,
         colors = iconButtonColors(
@@ -25,7 +30,7 @@ fun CameraButton(
         modifier = modifier
     ) {
         Icon(
-            imageVector = vectorResource(Res.drawable.ic_photo_camera_rounded),
+            imageVector = vectorResource(buttonIcon),
             contentDescription = null,
         )
     }

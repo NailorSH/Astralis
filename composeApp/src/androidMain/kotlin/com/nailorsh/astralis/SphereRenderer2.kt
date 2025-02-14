@@ -130,7 +130,7 @@ class SphereRenderer2(
     private var indexCount = 0
 
     override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
-        GLES20.glClearColor(0.1f, 0.1f, 0.1f, 1f)
+        GLES20.glClearColor(0f, 0f, 0f, 0f)
         GLES20.glEnable(GLES20.GL_DEPTH_TEST)
 
         planets.forEach { it.texture.load() }
