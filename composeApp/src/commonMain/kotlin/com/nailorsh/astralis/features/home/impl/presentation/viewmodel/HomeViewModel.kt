@@ -26,7 +26,11 @@ class HomeViewModel(
 
     override fun onAction(action: HomeAction) {
         viewModelScope.launch {
-
+            when (action) {
+                is HomeAction.OnCameraClicked -> {
+                    _state.update { it.copy(isCameraOn = !it.isCameraOn) }
+                }
+            }
         }
     }
 

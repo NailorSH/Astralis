@@ -9,5 +9,6 @@ import com.nailorsh.astralis.features.home.impl.presentation.viewmodel.HomeViewM
 fun CreateHomeScreen(viewModel: HomeViewModel) {
     HomeScreen(
         state = viewModel.state.collectAsState().value,
+        onAction = viewModel::onAction
     )
 }
