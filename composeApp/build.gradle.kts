@@ -80,6 +80,9 @@ kotlin {
 
             // KGL
             implementation(libs.kgl.android)
+
+            // CameraK
+            implementation(libs.camerak)
         }
 
         jvmMain.dependencies {

@@ -8,6 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import com.nailorsh.astralis.core.ui.components.LoadingBox
+import com.nailorsh.astralis.features.home.impl.presentation.ui.components.CameraScreen
 import com.nailorsh.astralis.features.home.impl.presentation.ui.components.HomeTopBar
 import com.nailorsh.astralis.features.home.impl.presentation.ui.components.SpaceScreen
 import com.nailorsh.astralis.features.home.impl.presentation.viewmodel.HomeAction
@@ -38,7 +39,6 @@ fun HomeScreenContent(
     onAction: (HomeAction) -> Unit,
     modifier: Modifier = Modifier
 ) {
-
     Scaffold(
         topBar = {
             HomeTopBar(
@@ -48,15 +48,12 @@ fun HomeScreenContent(
         },
         modifier = modifier
     ) {
-        Box(
-            modifier = modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = if (state.isCameraOn) 0.1f else 0.25f))
-        ) {
-            SpaceScreen(
-                planets = state.planets,
-                modifier = Modifier.fillMaxSize()
-            )
-        }
+        if (state.isCameraOn) CameraScreen(modifier = Modifier.fillMaxSize())
+        else Box(modifier = modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.25f)))
+
+        SpaceScreen(
+            planets = state.planets,
+            modifier = Modifier.fillMaxSize()
+        )
     }
 }
