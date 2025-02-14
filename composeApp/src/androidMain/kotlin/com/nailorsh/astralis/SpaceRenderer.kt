@@ -1,13 +1,10 @@
 package com.nailorsh.astralis
 
 
-import android.content.Context
 import android.opengl.GLES20
 import android.opengl.GLSurfaceView
 import android.opengl.Matrix
-import android.view.GestureDetector
 import android.view.MotionEvent
-import co.touchlab.kermit.Logger
 import com.nailorsh.astralis.core.utils.graphics.compileShader
 import com.nailorsh.astralis.core.utils.graphics.createProgram
 import com.nailorsh.astralis.features.home.impl.presentation.data.model.BodyWithPosition
@@ -65,34 +62,9 @@ val fragmentShaderPlanets = """
 
 """.trimIndent()
 
-class SphereRenderer2(
-    private val context: Context,
+class SpaceRenderer(
     private val planets: List<BodyWithPosition>
 ) : GLSurfaceView.Renderer {
-    private val gestureDetector = GestureDetector(
-        context,
-        object : GestureDetector.SimpleOnGestureListener() {
-            override fun onScroll(
-                e1: MotionEvent?,
-                e2: MotionEvent,
-                distanceX: Float,
-                distanceY: Float
-            ): Boolean {
-                Logger.d("GestureDetector") { "onScroll: distanceX=$distanceX, distanceY=$distanceY" }
-
-                // Регулировка чувствительности
-                val sensitivity = 0.2f
-                azimuth -= distanceX * sensitivity
-                altitude -= distanceY * sensitivity
-
-                // Ограничение вертикального угла (камера не может смотреть "вверх ногами")
-                altitude = altitude.coerceIn(-90f, 90f)
-
-                return true
-            }
-        }
-    )
-
     private var wireframeMode = true // Флаг для режима wireframe
 
     private var azimuth = 0f // Угол поворота влево-вправо
@@ -130,11 +102,6 @@ class SphereRenderer2(
         )
         programPlanets = initializeShaderProgram(vertexShaderPlanets, fragmentShaderPlanets)
 
-        // Загрузка текстуры
-        // https://www.flickr.com/photos/nasawebbtelescope/54183500660/
-//        textureId = loadTexture(context, R.drawable.space)
-
-        // Генерация данных сферы
         generateSphereData(40, 40)
 
         // Настройка фильтрации текстуры
