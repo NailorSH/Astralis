@@ -1,10 +1,12 @@
 package com.nailorsh.astralis
 
 
+import android.content.Context
 import android.opengl.GLES20
 import android.opengl.GLSurfaceView
 import android.opengl.Matrix
 import android.view.MotionEvent
+import android.view.ScaleGestureDetector
 import com.nailorsh.astralis.core.utils.graphics.compileShader
 import com.nailorsh.astralis.core.utils.graphics.createProgram
 import com.nailorsh.astralis.features.home.impl.presentation.data.model.BodyWithPosition
@@ -67,11 +69,14 @@ class SpaceRenderer(
 ) : GLSurfaceView.Renderer {
     private var wireframeMode = true // Флаг для режима wireframe
 
-    private var azimuth = 0f // Угол поворота влево-вправо
-    private var altitude = 0f // Угол поворота вверх-вниз
+    private var azimuth = 0f // Влево-вправо
+    private var altitude = 0f // Вверх-вниз
+    private var distance = 5f // Начальная дистанция (приближение)
 
     private var previousX = 0f
     private var previousY = 0f
+
+    private lateinit var scaleDetector: ScaleGestureDetector
 
     // Матрицы
     private val modelMatrix = FloatArray(16)
@@ -82,7 +87,6 @@ class SpaceRenderer(
     // OpenGL ресурсы
     private var programSkySphere = 0
     private var programPlanets = 0
-    private var textureId = 0
 
     // Буферы для данных сферы
     private var vertexBuffer: FloatBuffer? = null
@@ -124,13 +128,7 @@ class SpaceRenderer(
 
         val aspectRatio = width.toFloat() / height
         Matrix.perspectiveM(projectionMatrix, 0, 45f, aspectRatio, 0.1f, 500f)
-
-        Matrix.setLookAtM(
-            viewMatrix, 0,
-            0f, 0f, 0f,  // Камера находится в центре сферы
-            0f, 0f, -1f, // Смотрит вперёд по оси -Z
-            0f, 1f, 0f   // Верхняя часть направлена вдоль оси Y
-        )
+        updateViewMatrix()
     }
 
     override fun onDrawFrame(gl: GL10?) {
@@ -146,7 +144,6 @@ class SpaceRenderer(
         Matrix.multiplyMM(mvpMatrix, 0, projectionMatrix, 0, mvpMatrix, 0)
 
         drawSphere()
-
         // Отрисовка планет
         renderPlanets()
     }
@@ -196,10 +193,6 @@ class SpaceRenderer(
             val x = cos(altitudeRadians) * sin(azimuthRadians) * distanceMultiplier
             val y = sin(altitudeRadians) * distanceMultiplier
             val z = cos(altitudeRadians) * cos(azimuthRadians) * distanceMultiplier
-
-//            Logger.d("PlanetPosition") {
-//                "Planet ${planet.id}: x=$x, y=$y, z=$z"
-//            }
 
             // Устанавливаем позицию планеты в пространстве
             val position = floatArrayOf(x.toFloat(), y.toFloat(), z.toFloat())
@@ -347,30 +340,21 @@ class SpaceRenderer(
     }
 
     private fun updateViewMatrix() {
-        val eye = floatArrayOf(0f, 0f, 0f) // Позиция камеры
-        val center = FloatArray(3) // Точка, на которую смотрит камера
-        val up = floatArrayOf(0f, 1f, 1f) // Вектор "вверх"
+        val radAzimuth = Math.toRadians(azimuth.toDouble()).toFloat()
+        val radAltitude = Math.toRadians(altitude.toDouble()).toFloat()
 
-        // Угол поворота камеры
-        val radAzimuth = Math.toRadians(azimuth.toDouble())
-        val radAltitude = Math.toRadians(altitude.toDouble())
+        // Камера отодвигается назад по оси Z
+        val eyeX = (distance * cos(radAltitude) * sin(radAzimuth))
+        val eyeY = (distance * sin(radAltitude))
+        val eyeZ = (distance * cos(radAltitude) * cos(radAzimuth))
 
-        // Вычисляем направление взгляда камеры
-        // Перевод сферических координат в декартовые
-        center[0] = (sin(radAzimuth) * cos(radAltitude)).toFloat()
-        center[1] = sin(radAltitude).toFloat()
-        center[2] = (cos(radAzimuth) * cos(radAltitude)).toFloat()
-
-        // Вычисляем матрицу вида
         Matrix.setLookAtM(
-            viewMatrix,
-            0,
-            eye[0], eye[1], eye[2],
-            center[0], center[1], center[2],
-            up[0], up[1], up[2]
+            viewMatrix, 0,
+            eyeX, eyeY, eyeZ,  // Позиция камеры
+            0f, 0f, 0f,        // Точка, на которую смотрим (центр сцены)
+            0f, 1f, 0f         // Вектор "вверх"
         )
     }
-
 
     private fun initializeShaderProgram(
         vertexShaderCode: String,
@@ -393,36 +377,42 @@ class SpaceRenderer(
         return program
     }
 
-    fun toggleWireframeMode() {
-        wireframeMode = !wireframeMode
-    }
-
     fun onTouchEvent(event: MotionEvent): Boolean {
+        scaleDetector.onTouchEvent(event)
+
         when (event.action) {
             MotionEvent.ACTION_DOWN -> {
-                // Сохраняем начальные координаты касания
                 previousX = event.x
                 previousY = event.y
             }
 
             MotionEvent.ACTION_MOVE -> {
-                // Вычисляем разницу координат
                 val deltaX = event.x - previousX
                 val deltaY = event.y - previousY
 
-                // Обновляем углы камеры
-                val sensitivity = 0.075f
+                val sensitivity = 0.05f
                 azimuth += deltaX * sensitivity
                 altitude -= deltaY * sensitivity
 
-                // Ограничиваем вертикальный угол (чтобы избежать переворота)
-                altitude = altitude.coerceIn(-89f, 89f)
+                // Ограничение угла поворота вверх-вниз (-85° до 85°)
+                altitude = altitude.coerceIn(-85f, 85f)
 
-                // Сохраняем текущие координаты как предыдущие
                 previousX = event.x
                 previousY = event.y
             }
         }
-        return true // Возвращаем true, чтобы событие было обработано
+        return true
+    }
+
+    fun setScaleDetector(context: Context) {
+        scaleDetector = ScaleGestureDetector(
+            context,
+            object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
+                override fun onScale(detector: ScaleGestureDetector): Boolean {
+                    distance /= detector.scaleFactor
+                    distance = distance.coerceIn(1f, 50f) // Ограничиваем диапазон приближения
+                    return true
+                }
+            })
     }
 }

@@ -18,6 +18,7 @@ class SpaceView(context: Context, planets: List<BodyWithPosition>) : GLSurfaceVi
         setZOrderOnTop(true) // Позволяет видеть фон позади
 
         renderer = SpaceRenderer(planets)
+        renderer.setScaleDetector(context)
         setRenderer(renderer)
         renderMode = RENDERMODE_CONTINUOUSLY
     }
