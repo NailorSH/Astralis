@@ -73,6 +73,11 @@ class SpaceRenderer(
     private var altitude = 0f // Вверх-вниз
     private var distance = 5f // Начальная дистанция (приближение)
 
+    // Переменные для хранения позиции камеры
+    private var eyeX = 0f
+    private var eyeY = 0f
+    private var eyeZ = 0f
+
     private var previousX = 0f
     private var previousY = 0f
 
@@ -134,24 +139,24 @@ class SpaceRenderer(
     override fun onDrawFrame(gl: GL10?) {
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT or GLES20.GL_DEPTH_BUFFER_BIT)
 
-        // Обновляем матрицу вида
         updateViewMatrix()
-
-        // Отрисовка небесной сферы
-        Matrix.setIdentityM(modelMatrix, 0)
-
-        Matrix.multiplyMM(mvpMatrix, 0, viewMatrix, 0, modelMatrix, 0)
-        Matrix.multiplyMM(mvpMatrix, 0, projectionMatrix, 0, mvpMatrix, 0)
-
-        drawSphere()
-        // Отрисовка планет
+        drawGridLines()
         renderPlanets()
     }
 
-    private fun drawSphere() {
+    private fun drawGridLines() {
         GLES20.glUseProgram(programSkySphere)
 
         val mvpMatrixHandle = GLES20.glGetUniformLocation(programSkySphere, "uMVPMatrix")
+
+        // Двигаем сферу в позицию камеры
+        Matrix.setIdentityM(modelMatrix, 0)
+        Matrix.translateM(modelMatrix, 0, eyeX, eyeY, eyeZ) // Двигаем к камере
+
+        // Создаём итоговую матрицу
+        Matrix.multiplyMM(mvpMatrix, 0, viewMatrix, 0, modelMatrix, 0)
+        Matrix.multiplyMM(mvpMatrix, 0, projectionMatrix, 0, mvpMatrix, 0)
+
         GLES20.glUniformMatrix4fv(mvpMatrixHandle, 1, false, mvpMatrix, 0)
 
         val positionHandle = GLES20.glGetAttribLocation(programSkySphere, "aPosition")
@@ -162,7 +167,7 @@ class SpaceRenderer(
         GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA)
 
         val colorHandle = GLES20.glGetUniformLocation(programSkySphere, "uColor")
-        GLES20.glUniform4f(colorHandle, 0f, 0f, 0f, 1f) // Устанавливаем цвет (прозрачный)
+        GLES20.glUniform4f(colorHandle, 0f, 0f, 0f, 1f) // Чёрный цвет, полностью непрозрачный
 
         if (wireframeMode) {
             GLES20.glDrawElements(
@@ -182,6 +187,7 @@ class SpaceRenderer(
 
         GLES20.glDisableVertexAttribArray(positionHandle)
     }
+
 
     private fun renderPlanets() {
         planets.forEach { planet ->
@@ -343,16 +349,16 @@ class SpaceRenderer(
         val radAzimuth = Math.toRadians(azimuth.toDouble()).toFloat()
         val radAltitude = Math.toRadians(altitude.toDouble()).toFloat()
 
-        // Камера отодвигается назад по оси Z
-        val eyeX = (distance * cos(radAltitude) * sin(radAzimuth))
-        val eyeY = (distance * sin(radAltitude))
-        val eyeZ = (distance * cos(radAltitude) * cos(radAzimuth))
+        // Обновляем координаты камеры
+        eyeX = (distance * cos(radAltitude) * sin(radAzimuth))
+        eyeY = (distance * sin(radAltitude))
+        eyeZ = (distance * cos(radAltitude) * cos(radAzimuth))
 
         Matrix.setLookAtM(
             viewMatrix, 0,
-            eyeX, eyeY, eyeZ,  // Позиция камеры
-            0f, 0f, 0f,        // Точка, на которую смотрим (центр сцены)
-            0f, 1f, 0f         // Вектор "вверх"
+            eyeX, eyeY, eyeZ,  // Камера
+            0f, 0f, 0f,        // Смотрим в центр сцены
+            0f, 1f, 0f         // Вверх
         )
     }
 
