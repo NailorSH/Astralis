@@ -2,6 +2,10 @@ package com.nailorsh.astralis
 
 
 import android.content.Context
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.opengl.GLES20
 import android.opengl.GLSurfaceView
 import android.opengl.Matrix
@@ -65,8 +69,65 @@ val fragmentShaderPlanets = """
 """.trimIndent()
 
 class SpaceRenderer(
+    private val context: Context,
     private val planets: List<BodyWithPosition>
 ) : GLSurfaceView.Renderer {
+    private val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
+    private var accelerometer: Sensor? = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+    private var magnetometer: Sensor? = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)
+
+    private val gravity = FloatArray(3) // Данные с акселерометра
+    private val geomagnetic = FloatArray(3) // Данные с магнитометра
+
+    private val smoothingFactor = 0.1f // Чем меньше, тем плавнее, но медленнее реагирует
+
+    private val sensorEventListener = object : SensorEventListener {
+        override fun onSensorChanged(event: SensorEvent?) {
+            if (event == null) return
+
+            when (event.sensor.type) {
+                Sensor.TYPE_ACCELEROMETER -> {
+                    lowPassFilter(event.values, gravity)
+                }
+
+                Sensor.TYPE_MAGNETIC_FIELD -> {
+                    lowPassFilter(event.values, geomagnetic)
+                }
+            }
+
+            val rotationMatrix = FloatArray(9)
+            val inclinationMatrix = FloatArray(9)
+
+            if (SensorManager.getRotationMatrix(
+                    rotationMatrix,
+                    inclinationMatrix,
+                    gravity,
+                    geomagnetic
+                )
+            ) {
+                val orientation = FloatArray(3)
+                SensorManager.getOrientation(rotationMatrix, orientation)
+
+                // Преобразуем радианы в градусы
+                val newAzimuth = -Math.toDegrees(orientation[0].toDouble()).toFloat()
+                val newAltitude = Math.toDegrees(orientation[1].toDouble()).toFloat()
+
+                // Применяем сглаживание
+                azimuth = azimuth * (1 - smoothingFactor) + newAzimuth * smoothingFactor
+                altitude = altitude * (1 - smoothingFactor) + newAltitude * smoothingFactor
+            }
+        }
+
+        override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
+    }
+
+    // Функция сглаживания входных данных (low-pass filter)
+    private fun lowPassFilter(input: FloatArray, output: FloatArray) {
+        for (i in input.indices) {
+            output[i] = output[i] * (1 - smoothingFactor) + input[i] * smoothingFactor
+        }
+    }
+
     private var wireframeMode = true // Флаг для режима wireframe
 
     private var azimuth = 0f // Влево-вправо
@@ -98,6 +159,20 @@ class SpaceRenderer(
     private var indexBuffer: ShortBuffer? = null
     private var wireframeIndexBuffer: ShortBuffer? = null
     private var indexCount = 0
+
+    init {
+        sensorManager.registerListener(
+            sensorEventListener,
+            accelerometer,
+            SensorManager.SENSOR_DELAY_UI
+        )
+        sensorManager.registerListener(
+            sensorEventListener,
+            magnetometer,
+            SensorManager.SENSOR_DELAY_UI
+        )
+
+    }
 
     override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
         GLES20.glClearColor(0f, 0f, 0f, 0f)
@@ -357,7 +432,7 @@ class SpaceRenderer(
         Matrix.setLookAtM(
             viewMatrix, 0,
             eyeX, eyeY, eyeZ,  // Камера
-            0f, 0f, 0f,        // Смотрим в центр сцены
+            0f, 0f, 1f,        // Смотрим в центр сцены
             0f, 1f, 0f         // Вверх
         )
     }
