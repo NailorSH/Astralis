@@ -1,4 +1,4 @@
-package com.nailorsh.astralis
+package com.nailorsh.astralis.features.home.impl.presentation.ui.components
 
 import android.content.Context
 import android.graphics.PixelFormat

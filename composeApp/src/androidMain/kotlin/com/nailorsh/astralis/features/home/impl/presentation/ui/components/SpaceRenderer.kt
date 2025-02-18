@@ -1,4 +1,4 @@
-package com.nailorsh.astralis
+package com.nailorsh.astralis.features.home.impl.presentation.ui.components
 
 
 import android.content.Context
@@ -156,8 +156,6 @@ class SpaceRenderer(
         }
     }
 
-    private var wireframeMode = true // Флаг для режима wireframe
-
     private var azimuth = 0f // Влево-вправо
     private var altitude = 0f // Вверх-вниз
     private var distance = 5f // Начальная дистанция (приближение)
@@ -272,21 +270,12 @@ class SpaceRenderer(
         val colorHandle = GLES20.glGetUniformLocation(programSkySphere, "uColor")
         GLES20.glUniform4f(colorHandle, 0f, 0f, 0f, 1f) // Чёрный цвет, полностью непрозрачный
 
-        if (wireframeMode) {
-            GLES20.glDrawElements(
-                GLES20.GL_LINES,
-                wireframeIndexBuffer!!.limit(),
-                GLES20.GL_UNSIGNED_SHORT,
-                wireframeIndexBuffer
-            )
-        } else {
-            GLES20.glDrawElements(
-                GLES20.GL_TRIANGLES,
-                indexCount,
-                GLES20.GL_UNSIGNED_SHORT,
-                indexBuffer
-            )
-        }
+        GLES20.glDrawElements(
+            GLES20.GL_LINES,
+            wireframeIndexBuffer!!.limit(),
+            GLES20.GL_UNSIGNED_SHORT,
+            wireframeIndexBuffer
+        )
 
         GLES20.glDisableVertexAttribArray(positionHandle)
     }

@@ -3,7 +3,6 @@ package com.nailorsh.astralis.features.home.impl.presentation.ui.components
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
-import com.nailorsh.astralis.SpaceView
 import com.nailorsh.astralis.features.home.impl.presentation.data.model.BodyWithPosition
 
 @Composable
