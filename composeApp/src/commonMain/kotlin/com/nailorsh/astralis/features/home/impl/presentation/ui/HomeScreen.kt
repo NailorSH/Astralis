@@ -51,7 +51,7 @@ fun HomeScreenContent(
         modifier = modifier
     ) {
         if (state.isCameraOn) CameraScreen(modifier = Modifier.fillMaxSize())
-        else Box(modifier = modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.25f)))
+        else Box(modifier = modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.1f)))
 
         SpaceScreen(
             planets = state.planets,
