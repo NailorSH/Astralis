@@ -30,6 +30,10 @@ class HomeViewModel(
                 is HomeAction.OnCameraClicked -> {
                     _state.update { it.copy(isCameraOn = !it.isCameraOn) }
                 }
+
+                is HomeAction.OnOrientationTrackingClicked -> {
+                    _state.update { it.copy(isOrientationTrackingOn = !it.isOrientationTrackingOn) }
+                }
             }
         }
     }

@@ -80,6 +80,7 @@ class SpaceRenderer(
     private val geomagnetic = FloatArray(3) // Данные с магнитометра
 
     private val smoothingFactor = 0.1f // Чем меньше, тем плавнее, но медленнее реагирует
+    private var isListening = false
 
     private val sensorEventListener = object : SensorEventListener {
         override fun onSensorChanged(event: SensorEvent?) {
@@ -125,6 +126,33 @@ class SpaceRenderer(
     private fun lowPassFilter(input: FloatArray, output: FloatArray) {
         for (i in input.indices) {
             output[i] = output[i] * (1 - smoothingFactor) + input[i] * smoothingFactor
+        }
+    }
+
+    fun startListening() {
+        if (!isListening) {
+            isListening = true
+            accelerometer?.let {
+                sensorManager.registerListener(
+                    sensorEventListener,
+                    it,
+                    SensorManager.SENSOR_DELAY_UI
+                )
+            }
+            magnetometer?.let {
+                sensorManager.registerListener(
+                    sensorEventListener,
+                    it,
+                    SensorManager.SENSOR_DELAY_UI
+                )
+            }
+        }
+    }
+
+    fun stopListening() {
+        if (isListening) {
+            isListening = false
+            sensorManager.unregisterListener(sensorEventListener)
         }
     }
 

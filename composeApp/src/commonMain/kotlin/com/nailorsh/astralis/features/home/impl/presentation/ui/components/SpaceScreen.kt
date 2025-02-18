@@ -7,5 +7,6 @@ import com.nailorsh.astralis.features.home.impl.presentation.data.model.BodyWith
 @Composable
 expect fun SpaceScreen(
     planets: List<BodyWithPosition>,
+    isOrientationTrackingOn: Boolean,
     modifier: Modifier = Modifier
 )

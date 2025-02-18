@@ -4,4 +4,5 @@ import com.nailorsh.astralis.core.arch.Action
 
 sealed interface HomeAction : Action {
     object OnCameraClicked : HomeAction
+    object OnOrientationTrackingClicked : HomeAction
 }

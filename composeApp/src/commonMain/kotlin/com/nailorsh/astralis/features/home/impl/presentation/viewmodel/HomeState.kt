@@ -9,6 +9,7 @@ data class HomeState(
 
     val planets: List<BodyWithPosition> = emptyList(),
     var isCameraOn: Boolean = false,
+    var isOrientationTrackingOn: Boolean = false,
 
     val showLoadingScreen: Boolean = false
 ) : State

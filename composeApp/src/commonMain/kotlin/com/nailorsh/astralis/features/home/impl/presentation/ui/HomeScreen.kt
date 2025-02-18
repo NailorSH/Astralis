@@ -44,6 +44,8 @@ fun HomeScreenContent(
             HomeTopBar(
                 isCameraOn = state.isCameraOn,
                 onCameraClicked = { onAction(HomeAction.OnCameraClicked) },
+                isOrientationTrackingOn = state.isOrientationTrackingOn,
+                onOrientationTrackingClicked = { onAction(HomeAction.OnOrientationTrackingClicked) }
             )
         },
         modifier = modifier
@@ -53,6 +55,7 @@ fun HomeScreenContent(
 
         SpaceScreen(
             planets = state.planets,
+            isOrientationTrackingOn = state.isOrientationTrackingOn,
             modifier = Modifier.fillMaxSize()
         )
     }

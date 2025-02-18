@@ -19,6 +19,8 @@ import org.jetbrains.compose.resources.stringResource
 fun HomeTopBar(
     isCameraOn: Boolean,
     onCameraClicked: () -> Unit,
+    isOrientationTrackingOn: Boolean,
+    onOrientationTrackingClicked: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
@@ -28,6 +30,9 @@ fun HomeTopBar(
         colors = TopAppBarDefaults.topAppBarColors(
             containerColor = Color.Transparent
         ),
+        navigationIcon = {
+            OrientationTrackingButton(isOrientationTrackingOn, onOrientationTrackingClicked)
+        },
         actions = {
             CameraButton(isCameraOn, onCameraClicked)
         },

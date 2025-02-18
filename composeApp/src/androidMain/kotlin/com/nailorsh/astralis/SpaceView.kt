@@ -7,7 +7,7 @@ import android.view.MotionEvent
 import com.nailorsh.astralis.features.home.impl.presentation.data.model.BodyWithPosition
 
 class SpaceView(context: Context, planets: List<BodyWithPosition>) : GLSurfaceView(context) {
-    private val renderer: SpaceRenderer
+    private val renderer = SpaceRenderer(context, planets)
 
     init {
         setEGLContextClientVersion(2)
@@ -17,10 +17,13 @@ class SpaceView(context: Context, planets: List<BodyWithPosition>) : GLSurfaceVi
         holder.setFormat(PixelFormat.TRANSLUCENT)
         setZOrderOnTop(true) // Позволяет видеть фон позади
 
-        renderer = SpaceRenderer(context, planets)
         renderer.setScaleDetector(context)
         setRenderer(renderer)
         renderMode = RENDERMODE_CONTINUOUSLY
+    }
+
+    fun updateSensorsState(isSensorsOn: Boolean) {
+        if (isSensorsOn) renderer.startListening() else renderer.stopListening()
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean = renderer.onTouchEvent(event)
