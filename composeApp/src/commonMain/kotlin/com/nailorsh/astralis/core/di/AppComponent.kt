@@ -2,6 +2,7 @@ package com.nailorsh.astralis.core.di
 
 import com.danielgergely.kgl.Kgl
 import com.nailorsh.astralis.core.data.local.CelestialDataRepository
+import com.nailorsh.astralis.core.data.remote.AstronomyApi
 import com.nailorsh.astralis.features.root.api.RootDecomposeComponent
 import me.tatarka.inject.annotations.Provides
 import software.amazon.lastmile.kotlin.inject.anvil.AppScope
@@ -24,6 +25,7 @@ abstract class AppComponent(
     protected val kgl: Kgl
 ) {
     abstract val celestialDataRepository: CelestialDataRepository
+    abstract val astronomyApi: AstronomyApi
     abstract val rootDecomposeComponentFactory: RootDecomposeComponent.Factory
 
     companion object {
