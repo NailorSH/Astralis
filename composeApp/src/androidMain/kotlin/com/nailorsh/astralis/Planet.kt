@@ -1,25 +1,49 @@
+//@file:OptIn(ExperimentalUnsignedTypes::class)
+//
 //package com.nailorsh.astralis
 //
+//import android.opengl.GLES20
+//import android.opengl.GLES20.GL_TRIANGLES
+//import android.opengl.GLES20.GL_UNSIGNED_SHORT
+//import astralis.composeapp.generated.resources.Res
+//import co.touchlab.kermit.Logger
+//import com.danielgergely.kgl.FloatBuffer
+//import com.danielgergely.kgl.GL_ARRAY_BUFFER
+//import com.danielgergely.kgl.GL_COMPILE_STATUS
+//import com.danielgergely.kgl.GL_ELEMENT_ARRAY_BUFFER
+//import com.danielgergely.kgl.GL_FLOAT
+//import com.danielgergely.kgl.GL_FRAGMENT_SHADER
+//import com.danielgergely.kgl.GL_LINK_STATUS
+//import com.danielgergely.kgl.GL_STREAM_DRAW
+//import com.danielgergely.kgl.GL_VERTEX_SHADER
+//import com.danielgergely.kgl.GlBuffer
+//import com.danielgergely.kgl.IntBuffer
+//import com.danielgergely.kgl.KglAndroid
+//import com.danielgergely.kgl.Shader
+//import com.danielgergely.kgl.VertexArrayObject
 //import com.mayakapps.kache.InMemoryKache
 //import com.mayakapps.kache.KacheStrategy
+//import com.nailorsh.astralis.core.kgl.bufferSubData
+//import com.nailorsh.astralis.core.kgl.enableAttributeArray
+//import com.nailorsh.astralis.core.kgl.setAttributeBuffer
 //import com.nailorsh.astralis.core.utils.graphic.getApparentSiderealTime
 //import com.nailorsh.astralis.core.utils.graphic.getMeanSiderealTime
-//import com.nailorsh.astralis.core.utils.graphic.math.AU
-//import com.nailorsh.astralis.core.utils.graphic.math.PARSEC
-//import com.nailorsh.astralis.core.utils.graphic.math.fuzzyEquals
-//import com.nailorsh.astralis.core.utils.graphic.math.matrix.Mat4d
-//import com.nailorsh.astralis.core.utils.graphic.math.times
-//import com.nailorsh.astralis.core.utils.graphic.math.vector.Vec3d
-//import com.nailorsh.astralis.core.utils.graphic.math.vector.Vec3f
-//import kotlin.math.acos
-//import kotlin.math.asin
-//import kotlin.math.atan
-//import kotlin.math.cos
-//import kotlin.math.log10
+//import com.nailorsh.astralis.core.utils.graphics.AstralisTexture
+//import com.nailorsh.astralis.core.utils.graphics.math.computeCosSinRho
+//import com.nailorsh.astralis.core.utils.graphics.math.computeCosSinTheta
+//import com.nailorsh.astralis.core.utils.graphics.math.fuzzyEquals
+//import com.nailorsh.astralis.core.utils.graphics.math.matrix.Mat4d
+//import com.nailorsh.astralis.core.utils.graphics.math.times
+//import com.nailorsh.astralis.core.utils.graphics.math.vector.Vec3d
+//import com.nailorsh.astralis.core.utils.graphics.math.vector.Vec3f
+//import com.nailorsh.astralis.core.utils.graphics.math.vector.Vector3
+//import com.nailorsh.astralis.core.utils.graphics.shader.AttributeLocation
+//import com.nailorsh.astralis.core.utils.graphics.shader.makeSRGBUtilsShader
+//import org.jetbrains.compose.resources.ExperimentalResourceApi
+//import kotlin.math.PI
 //import kotlin.math.max
-//import kotlin.math.pow
-//import kotlin.math.sin
 //import kotlin.math.sqrt
+//
 //
 //const val J2000 = 2451545.0
 //const val ORBIT_SEGMENTS = 360
@@ -28,10 +52,18 @@
 //// arguments are JDE, position[3], velocity[3].
 //// The last variable is the userData pointer, which is Q_NULLPTR for Planets, but used in derived classes. E.g. points to the KeplerOrbit for Comets.
 //
+//class Planet3DModel(
+//    var vertexArr: FloatArray = floatArrayOf(),
+//    var texCoordArr: FloatArray = floatArrayOf(),
+//    var indiceArr: UShortArray = ushortArrayOf()
+//)
+//
 //class Planet(
 //    private val name: String,
 //    private val equatorialRadius: Double,
-//    private val haloColor: Vec3f,
+//    private val oblateness: Double,
+//    private val roughness: Float,
+//    private val albedo: Float,
 //    private val hidden: Boolean,
 //    private val eclipticPos: Vec3d,
 //    private val aberrationPush: Vec3d,
@@ -46,24 +78,142 @@
 //    ) -> Unit,
 //    private val flagLabels: Boolean,
 //) : CelestialObject() {
+//    private var texMap: AstralisTexture? = null
+//    private var normalMap: AstralisTexture? = null
+//    private var horizonMap: AstralisTexture? = null
+//
+//    private var sphereVAO: VertexArrayObject? = null
+//    private var sphereVBO: GlBuffer? = null
+//
 //    private var lastJDE: Double = J2000
 //    private var orbitPositionsCache = InMemoryKache<Double, Vec3d>((ORBIT_SEGMENTS * 2).toLong()) {
 //        strategy = KacheStrategy.LRU
 //    }
 //    private val parent: Planet? = null
-//    private val rotationElements = RotationElements()  // Rotation and axis orientation parameters
+//    private val rotationElements = RotationElements(name)
 //    private val sphereScale = 1.0  // Rotation and axis orientation parameters
+//    private val axisRotation = 0f
 //
-//    enum class ApparentMagnitudeAlgorithm {
-//        MUELLER_1893,               // G. Mueller, based on visual observations 1877-91. [Explanatory Supplement to the Astronomical Almanac, 1961]
-//        ASTRONOMICAL_ALMANAC_1984,   // Astronomical Almanac 1984 and later. These give V (instrumental) magnitudes (allegedly from D.L. Harris, but this is wrong!)
-//        EXPLANATORY_SUPPLEMENT_1992, // Algorithm provided by Pere Planesas (Observatorio Astronomico Nacional) (Was called "Planesas")
-//        EXPLANATORY_SUPPLEMENT_2013, // Explanatory Supplement to the Astronomical Almanac, 3rd edition 2013
-//        MALLAMA_HILTON_2018,         // A. Mallama, J. L. Hilton: Computing apparent planetary magnitudes for the Astronomical Almanac. Astron.&Computing 25 (2018) 10-24
-//        UNDEFINED_ALGORITHM,
-//        GENERIC                     // Visual magnitude based on phase angle and albedo. The formula source for this is totally unknown!
-//    };
+//    // oneMinusOblateness = (polar radius) / (equatorial radius).
+//    // Geometric flattening f = 1 - oneMinusOblateness (ExplanSup2013 10.1)
+//    private val oneMinusOblateness = 1 - oblateness
 //
+//    private val outgasIntensity = 0f
+//    private val outgasFalloff = 0f
+//
+//    data class RenderData(
+//        var modelMatrix: Mat4d = Mat4d(),
+//        var mTarget: Mat4d = Mat4d(),
+//        var eyePos: Vec3d = Vec3d()
+//    )
+//
+//    fun computeModelMatrix(solarEclipseCase: Boolean): Mat4d {
+//        var result = Mat4d.translation(eclipticPos) * rotLocalToParent
+//
+//        var p: Planet? = parent
+//        when (rotationElements.method) {
+//            RotationElements.ComputationMethod.TRADITIONAL -> {
+//                while (p?.parent != null) {
+//                    result = Mat4d.translation(p.eclipticPos) * result * p.rotLocalToParent
+//                    p = p.parent
+//                }
+//            }
+//
+//            RotationElements.ComputationMethod.WGCCRE -> {
+//                while (p?.parent != null) {
+//                    result = Mat4d.translation(p.eclipticPos) * result
+//                    p = p.parent
+//                }
+//            }
+//        }
+//
+//        // WEIRD! The following has to be disabled to have correct solar eclipse sizes in InfoString.
+//        // However, it has to be active for Lunar eclipse shadow rendering.
+//        // Maybe SolarSystem.getSolarEclipseFactor() can be implemented without Planet.computeModelMatrix()
+//        if (name == "Moon" && !solarEclipseCase) {
+//            val sun: Planet = SolarSystem.getInstance()
+//                .getSun() // Assuming SolarSystem has a singleton instance and getSun method
+//            val earthSunDistance = parent?.eclipticPos?.norm() ?: 0.0
+//            val earthMoonDistance = eclipticPos.norm()
+//            val factor = earthMoonDistance / earthSunDistance
+//
+//            result = Mat4d.translation((factor * sun.aberrationPush)) *
+//                    result * Mat4d.zRotation(PI / 180.0 * (axisRotation + 90.0))
+//        } else {
+//            result = Mat4d.translation(aberrationPush) * result * Mat4d.zRotation(
+//                PI / 180.0 * (axisRotation + 90.0)
+//            )
+//        }
+//
+//        return result
+//    }
+//
+//    fun setCommonShaderUniforms(
+//        painter: AstralisPainter,
+//        shader: Int,
+//        shaderVars: PlanetShaderVars
+//    ): RenderData {
+//        val data = RenderData()
+//
+//        val sun = SolarSystem.getInstance().getSun()
+//        val projector = painter.projector
+//
+//        val m = projector.projectionMatrix
+//        val qMat = m.toFloatArray()
+//
+//        data.modelMatrix = computeModelMatrix(false)
+//        data.mTarget = data.modelMatrix.inverse()
+//
+//        val core = StelApp.getInstance().core
+//        data.eyePos = core.observerHeliocentricEclipticPos
+//        core.getHeliocentricEclipticModelViewTransform(StelCore.RefractionOff).forward(data.eyePos)
+//        projector.modelViewTransform.backward(data.eyePos)
+//        data.eyePos = data.eyePos.normalize()
+//
+//        GLES20.glUseProgram(shader)
+//
+//        GLES20.glUniformMatrix4fv(shaderVars.projectionMatrix, 1, false, qMat.toFloatArray(), 0)
+//        GLES20.glUniform3f(
+//            shaderVars.eyeDirection,
+//            data.eyePos.x.toFloat(),
+//            data.eyePos.y.toFloat(),
+//            data.eyePos.z.toFloat()
+//        )
+//        GLES20.glUniform1i(shaderVars.tex, 0)
+//
+//        if (this != sun) {
+//            GLES20.glUniform4f(
+//                shaderVars.sunInfo,
+//                data.mTarget[12].toFloat(),
+//                data.mTarget[13].toFloat(),
+//                data.mTarget[14].toFloat(),
+//                sun.equatorialRadius.toFloat()
+//            )
+//        }
+//
+//        GLES20.glUniform2f(shaderVars.poleLat, 1.1f, -0.1f)
+//
+//        if (shaderVars.orenNayarParameters >= 0) {
+//            val roughnessSq = roughness * roughness
+//            val orenNayarParams = floatArrayOf(
+//                1.0f - 0.5f * roughnessSq / (roughnessSq + 0.33f),
+//                0.45f * roughnessSq / (roughnessSq + 0.09f),
+//                50.0f * albedo / PI.toFloat(),
+//                roughnessSq
+//            )
+//            GLES20.glUniform4fv(shaderVars.orenNayarParameters, 1, orenNayarParams, 0)
+//        }
+//
+//        val outgasIntensityDistanceScaled =
+//            (outgasIntensity.toDouble() / getHeliocentricEclipticPos().normSquared()).toFloat()
+//        GLES20.glUniform2f(
+//            shaderVars.outgasParameters,
+//            outgasIntensityDistanceScaled,
+//            outgasFalloff
+//        )
+//
+//        return data
+//    }
 //
 //    suspend fun draw(
 //        core: AstralisCore,
@@ -72,43 +222,8 @@
 //        if (hidden) return
 //
 //        val ss = SolarSystem.getInstance()
-//        val vMagnitude = getVMagnitude(core, eclipseFactor)
 //
-//        // Исключаем отрисовку, если превышен лимит по яркости
-//        if (core.skyDrawer.planetMagnitudeLimitEnabled &&
-//            vMagnitude > core.skyDrawer.customPlanetMagnitudeLimit.toFloat()
-//        ) {
-//            if (eclipseFactor == 1.0) return
-//        }
-//
-//        val isSun = this == ss.sun
-//        val currentLocationIsEarth = core.currentLocation.planetName == "Earth"
-//
-//        if (isSun && currentLocationIsEarth) {
-//            val lmgr = LandscapeMgr.getInstance()
-//            val posAltAz = getAltAzPosAuto(core).toVec3f().normalize()
-//
-//            if (posAltAz.z < sin(-1f * Math.toRadians(1.0))) {
-//                lmgr.setLandscapeTint(Vec3f(1f))
-//            } else {
-//                val sunAlt = asin(posAltAz.z)
-//                val angleFactor = if (sunAlt > 0) 1f else 0.5f * (cos(180f * sunAlt).toFloat() + 1f)
-//
-//                val extinctedMag = getVMagnitudeWithExtinction(core) - getVMagnitude(core)
-//                val color = Vec3f(
-//                    haloColor.x,
-//                    0.80f.pow(extinctedMag) * haloColor.y,
-//                    0.25f.pow(extinctedMag) * haloColor.z
-//                )
-//
-//                val fullTint =
-//                    0.25f * Vec3f(3f + sqrt(color.x), 3f + sqrt(color.y), 3f + sqrt(color.z))
-//                lmgr.setLandscapeTint(angleFactor * fullTint + (1f - angleFactor) * Vec3f(1f))
-//            }
-//        }
-//
-//        val cutDimObjects =
-//            ((vMagnitude - 5.0f) > core.skyDrawer.limitMagnitude) && pType >= PlanetType.ASTEROID
+//        val cutDimObjects = pType >= PlanetType.ASTEROID
 //        if (ss.markerValue == 0.0 && cutDimObjects && !core.currentLocation.planetName.contains(
 //                "Observer",
 //                ignoreCase = true
@@ -116,7 +231,7 @@
 //        ) {
 //            return
 //        }
-//        if (pType >= PlanetType.ASTEROID && vMagnitude > ss.markerMagThreshold) return
+//        if (pType >= PlanetType.ASTEROID) return
 //
 //        var mat = Mat4d.translation(eclipticPos) * rotLocalToParent
 //        var p = parent
@@ -142,7 +257,7 @@
 //        transfo.combine(mat)
 //
 //        if (this == core.currentPlanet) {
-//            if (rings) draw3dModel(core, transfo, 1024f, eclipseFactor, true)
+//            if (rings) draw3dModel(core, transfo, 1024f)
 //            return
 //        }
 //    }
@@ -150,18 +265,9 @@
 //    suspend fun draw3dModel(
 //        core: AstralisCore,
 //        transfo: StelProjector.ModelViewTranformP,
-//        screenRd: Float,
-//        solarEclipseFactor: Double,
-//        drawOnlyRing: Boolean
+//        screenRd: Float
 //    ) {
 //        val ssm = core.getModule(SolarSystem::class.java)
-//
-//        val vMagnitude = getVMagnitude(core, solarEclipseFactor)
-//        val vMagnitudeWithExtinction = getVMagnitudeWithExtinction(core, vMagnitude)
-//
-//        val extinctedMag = vMagnitudeWithExtinction - vMagnitude
-//        val magFactorGreen = 0.85.pow(0.6 * extinctedMag).toFloat()
-//        val magFactorBlue = 0.6.pow(0.5 * extinctedMag).toFloat()
 //
 //        // Draw the real 3D object only if the screen radius is greater than 1.
 //        if (screenRd > 1f) {
@@ -176,27 +282,141 @@
 //            core.setClippingPlanes(zNear, zFar)
 //
 //            val transfo2 = transfo.clone()
-//            transfo2.combine(Mat4d.zRotation(Math.PI / 180 * (axisRotation + 90f)))
+//            transfo2.combine(Mat4d.zRotation(PI / 180 * (axisRotation + 90f)))
 //            val sPainter = StelPainter(core.getProjection(transfo2))
 //
 //            val sunPos = ssm.getSun().heliocentricEclipticPos + ssm.getSun().aberrationPush()
 //            core.getHeliocentricEclipticModelViewTransform().forward(sunPos)
-//            val light = Light(sunPos)
 //
-//            light.diffuse.set(1f, magFactorGreen, magFactorBlue)
-//            light.ambient.set(0.02f, magFactorGreen * 0.02f, magFactorBlue * 0.02f)
-//
-//            // Draw 3D model, skipping extra renderings like the halo and the sun's corona
-//            if (ssm.getFlagUseObjModels() && objModelPath.isNotEmpty()) {
-//                if (!drawObjModel(sPainter, screenRd)) {
-//                    drawSphere(sPainter, screenRd, drawOnlyRing)
-//                }
-//            } else {
-//                drawSphere(sPainter, screenRd, drawOnlyRing)
-//            }
+//            drawSphere(sPainter, screenRd)
 //
 //            core.setClippingPlanes(n, f)  // Restore original clipping planes
 //        }
+//    }
+//
+//    suspend fun drawSphere(painter: AstralisPainter, screenRd: Float) {
+//        val sphereScaleF = sphereScale.toFloat()
+//
+//        // Проверка загрузки текстур
+//        if (horizonMap?.bind(0u) != true) return
+//        if (normalMap?.bind(0u) != true) return
+//        if (texMap?.bind(0u) != true) return
+//
+//        painter.setBlending(false)
+//        painter.setCullFace(true)
+//
+//        // Количество фасетов для оптимизации
+//        val nbFacet = (screenRd * 40f / 50f * sqrt(sphereScaleF).coerceIn(10f, 100f))
+//            .toUInt().toUShort()
+//
+//        // Генерация сферической модели
+//        val model = Planet3DModel()
+//        sSphere(model, equatorialRadius.toFloat(), oneMinusOblateness.toFloat(), nbFacet, nbFacet)
+//
+//        // Проекция вершин
+//        val projectedVertexArr = FloatArray(model.vertexArr.size)
+//        for (i in model.vertexArr.indices step 3) {
+//            val p = Vec3f(
+//                model.vertexArr[i],
+//                model.vertexArr[i + 1],
+//                model.vertexArr[i + 2]
+//            ) * sphereScaleF
+//            painter.projector.project(p, Vector3.getVectorAtIndex(i, projectedVertexArr))
+//        }
+//
+//        // Проверка шейдеров
+//        if (shaderError) return
+//
+//        var shader = planetShaderProgram
+//        var shaderVars = planetShaderVars
+//
+//        if (this == SolarSystem.getMoon()) {
+//            shader = moonShaderProgram
+//            shaderVars = moonShaderVars
+//        }
+//
+//        // Если шейдеры не загружены, попытка их инициализировать
+//        if (shader == null) {
+//            initShader()
+//            if (shaderError) {
+//                println("Can't use planet drawing, shaders invalid!")
+//                return
+//            }
+//            shader = planetShaderProgram
+//            if (this == SolarSystem.getMoon()) {
+//                shader = moonShaderProgram
+//            }
+//        }
+//
+//        shader?.let { KglAndroid.useProgram(it) }
+//
+//        if (sphereVAO == null) {
+//            sphereVAO = KglAndroid.createVertexArray()
+//            sphereVBO = KglAndroid.createBuffer()
+//        }
+//
+//        KglAndroid.bindVertexArray(sphereVAO)
+//        KglAndroid.bindBuffer(GL_ARRAY_BUFFER, sphereVBO)
+//
+//        val projectedVertArrSize = projectedVertexArr.size * Float.SIZE_BYTES
+//        val modelVertArrOffset = projectedVertArrSize
+//        val modelVertArrSize = model.vertexArr.size * Float.SIZE_BYTES
+//        val texCoordsOffset = modelVertArrOffset + modelVertArrSize
+//        val texCoordsSize = model.texCoordArr.size * Float.SIZE_BYTES
+//        val indicesOffset = texCoordsOffset + texCoordsSize
+//        val indicesSize = model.indiceArr.size * Short.SIZE_BYTES
+//
+//        KglAndroid.bufferData(
+//            GL_ARRAY_BUFFER,
+//            FloatBuffer(0),
+//            (indicesOffset + indicesSize),
+//            GL_STREAM_DRAW
+//        )
+//        KglAndroid.bufferSubData(
+//            GL_ARRAY_BUFFER,
+//            0,
+//            projectedVertArrSize,
+//            FloatBuffer(projectedVertexArr)
+//        )
+//        KglAndroid.bufferSubData(
+//            GL_ARRAY_BUFFER,
+//            modelVertArrOffset,
+//            modelVertArrSize,
+//            FloatBuffer(model.vertexArr)
+//        )
+//        KglAndroid.bufferSubData(
+//            GL_ARRAY_BUFFER,
+//            texCoordsOffset,
+//            texCoordsSize,
+//            FloatBuffer(model.texCoordArr)
+//        )
+//        KglAndroid.bufferSubData(
+//            GL_ARRAY_BUFFER,
+//            indicesOffset,
+//            indicesSize,
+//            IntBuffer(model.indiceArr.map { it.toInt() }.toIntArray())
+//        )
+//
+//        KglAndroid.setAttributeBuffer(shaderVars.vertex, GL_FLOAT, 0, 3)
+//        KglAndroid.enableAttributeArray(shaderVars.vertex)
+//        KglAndroid.setAttributeBuffer(shaderVars.unprojectedVertex, GL_FLOAT, modelVertArrOffset, 3)
+//        KglAndroid.enableAttributeArray(shaderVars.unprojectedVertex)
+//        KglAndroid.setAttributeBuffer(shaderVars.texCoord, GL_FLOAT, texCoordsOffset, 2)
+//        KglAndroid.enableAttributeArray(shaderVars.texCoord)
+//
+//        GLES20.glDrawElements(
+//            GL_TRIANGLES,
+//            model.indiceArr.size,
+//            GL_UNSIGNED_SHORT,
+//            indicesOffset
+//        )
+//
+//        KglAndroid.bindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0)
+//        KglAndroid.bindBuffer(GL_ARRAY_BUFFER, 0)
+//        KglAndroid.bindVertexArray(0)
+//
+//        KglAndroid.useProgram(0)
+//        painter.setCullFace(false)
 //    }
 //
 //    // A Planet's own eclipticPos is in VSOP87 ref. frame (practically equal to ecliptic of J2000 for us) coordinates relative to the parent body (sun, planet).
@@ -209,155 +429,6 @@
 //        return AstralisCore.matVsop87ToJ2000.multiplyWithoutTranslation(
 //            getHeliocentricEclipticPos() - core.getObserverHeliocentricEclipticPos() + Vec3d(0.0)
 //        )
-//    }
-//
-//    // Computation of the visual magnitude (V band) of the planet.
-//    override suspend fun getVMagnitude(core: AstralisCore): Float {
-//        return getVMagnitude(core, 1.0)
-//    }
-//
-//    suspend fun getVMagnitude(core: AstralisCore, eclipseFactor: Double): Float {
-//        if (parent == null) {
-//            // Sun, compute the apparent magnitude for the absolute mag (V: 4.83) and observer's distance
-//            // Hint: Absolute Magnitude of the Sun in Several Bands: http://mips.as.arizona.edu/~cnaw/sun.html
-//            val distParsec =
-//                sqrt(core.getObserverHeliocentricEclipticPos().normSquared()) * AU / PARSEC
-//
-//            // Check how much of it is visible
-//            val shadowFactor = max(0.000128, eclipseFactor)
-//            // See: Hughes, D. W., Brightness during a solar eclipse // Journal of the British Astronomical Association, vol.110, no.4, p.203-205
-//            // URL: http://adsabs.harvard.edu/abs/2000JBAA..110..203H
-//
-//            return (4.83 + 5 * (log10(distParsec) - 1.0) - 2.5 * (log10(shadowFactor))).toFloat()
-//        }
-//
-//        val ssystem: SolarSystem = SolarSystem.getInstance()
-//        // Compute the phase angle i. We need the intermediate results also below, therefore we don't just call getPhaseAngle.
-//        val observerHelioPos = core.getObserverHeliocentricEclipticPos()
-//        val observerRq = observerHelioPos.normSquared()
-//        val planetHelioPos = getHeliocentricEclipticPos()
-//        val planetRq = planetHelioPos.normSquared()
-//        val observerPlanetRq = (observerHelioPos - planetHelioPos).normSquared()
-//        val dr = sqrt(observerPlanetRq * planetRq)
-//        val cosChi = (observerPlanetRq + planetRq - observerRq) / (2.0 * dr)
-//        val phaseAngle = acos(cosChi)
-//
-//        var shadowFactor = 1.0
-//        // Check if the satellite is inside the inner shadow of the parent planet:
-//        parent.parent?.let { parent ->
-//            val parentHelioPos = parent.getHeliocentricEclipticPos()
-//            val parentRq = parentHelioPos.normSquared()
-//            val posTimesParentPos = planetHelioPos * parentHelioPos
-//            if (posTimesParentPos > parentRq) {
-//                // The satellite is farther away from the sun than the parent planet.
-//                if (name == "Moon") {
-//                    val totalityFactor = 2.710e-5 // defined previously by AW
-//                    val shadowRadii = ssystem.getEarthShadowRadiiAtLunarDistance()
-//                    val dist = getEclipticPos().norm()  // Lunar distance [AU]
-//                    val u =
-//                        shadowRadii.first[0] / 3600.0 // geocentric angle of earth umbra radius at lunar distance [degrees]
-//                    val p =
-//                        shadowRadii.second[0] / 3600.0 // geocentric angle of earth penumbra radius at lunar distance [degrees]
-//                    val r =
-//                        atan(equatorialRadius / dist) * (180.0 / Math.PI) // geocentric angle of Lunar radius at lunar distance [degrees]
-//
-//                    // We must compute an elongation from the aberrated sun. The following is adapted from getElongation(), with a tweak to move the Sun to its apparent position.
-//                    val sun = ssystem.getSun()
-//                    val obsPos = parent.eclipticPos - sun.getAberrationPush()
-//                    val observerRq = obsPos.normSquared()
-//                    val planetHelioPos = getHeliocentricEclipticPos() - sun.getAberrationPush()
-//                    val planetRq = planetHelioPos.normSquared()
-//                    val observerPlanetRq = dist * dist // (obsPos - planetHelioPos).normSquared()
-//                    val aberratedElongation = Math.acos(
-//                        (observerPlanetRq + observerRq - planetRq) / (2.0 * Math.sqrt(
-//                            observerPlanetRq * observerRq
-//                        ))
-//                    )
-//                    val od =
-//                        180.0 - aberratedElongation * (180.0 / Math.PI) // opposition distance [degrees]
-//
-//                    when {
-//                        od > p + r -> shadowFactor = 1.0
-//                        od > u + r -> shadowFactor = 0.6 + 0.4 * Math.sqrt((od - u - r) / (p - u))
-//                        od > u - r -> shadowFactor =
-//                            totalityFactor + (0.6 - totalityFactor) * (od - u + r) / (2.0 * r)
-//
-//                        else -> shadowFactor = totalityFactor * 0.5 * (1 + od / (u - r))
-//                    }
-//                } else {
-//                    val sunRadius = parent.parent?.equatorialRadius ?: 0.0
-//                    val sunMinusParentRadius = sunRadius - parent.equatorialRadius
-//                    val quot = posTimesParentPos / parentRq
-//
-//                    // Compute d = distance from satellite center to border of inner shadow.
-//                    // d>0 means inside the shadow cone.
-//                    var d = sunRadius - sunMinusParentRadius * quot - Math.sqrt(
-//                        (1.0 - sunMinusParentRadius / Math.sqrt(parentRq)) * (planetRq - posTimesParentPos * quot)
-//                    )
-//                    if (d >= equatorialRadius) {
-//                        // The satellite is totally inside the inner shadow.
-//                        shadowFactor = 1e-9
-//                    } else if (d > -equatorialRadius) {
-//                        // The satellite is partly inside the inner shadow,
-//                        // compute a fantasy value for the magnitude:
-//                        d /= equatorialRadius
-//                        shadowFactor = (0.5 - (Math.asin(d) + d * Math.sqrt(1.0 - d * d)) / Math.PI)
-//                    }
-//                }
-//            }
-//        }
-//
-//        // Lunar Magnitude from Earth: This is a combination of Russell 1916 (!) with its albedo dysbalance, Krisciunas-Schaefer (1991) for the opposition surge, and Agrawal (2016) for the contribution of earthshine.
-//        if (core.getCurrentLocation().planetName == "Earth" && name == "Moon") {
-//            val observerHelioVelocity = core.getObserverHeliocentricEclipticVelocity()
-//            val signedPhaseAngle =
-//                if (isWaning(observerHelioPos, observerHelioVelocity)) phaseAngle else -phaseAngle
-//
-//            val p = signedPhaseAngle * (180.0 / Math.PI)
-//            var magIll = if (p < 0) {
-//                ((((((4.208547E-12 * p + 1.754857E-9) * p + 2.749700E-7) * p + 1.860811E-5) * p + 5.590310E-4) * p - 1.628691E-2) * p + 4.807056E-3
-//            } else {
-//                ((((((4.609790E-12 * p - 1.977692E-9) * p + 3.305454E-7) * p - 2.582825E-5) * p + 9.593360E-4) * p + 1.213761E-2) * p + 7.710015E-3
-//            }
-//            magIll -= 12.73
-//            val rf = 2.56e-6  // Reference flux [lx] from Agrawal (14)
-//            var fluxIll = rf * Math.pow(10.0, -0.4 * magIll)
-//
-//            // Apply opposition surge where needed
-//            val surge = Math.max(1.0, 1.35 - 2.865 * Math.abs(phaseAngle))
-//            fluxIll *= surge // This is now shape of Russell's magnitude curve with peak brightness matched with Krisciunas-Schaefer
-//            // Apply distance factor
-//            val lunarMeanDist = 384399.0 / AU
-//            val lunarMeanDistSq = lunarMeanDist * lunarMeanDist
-//            fluxIll *= lunarMeanDistSq / observerPlanetRq
-//
-//            // Compute flux of earthshine: Agrawal 2016.
-//            val beta = parent.equatorialRadius * parent.equatorialRadius / eclipticPos.normSquared()
-//            val gamma = equatorialRadius * equatorialRadius / eclipticPos.normSquared()
-//
-//            val slfoe =
-//                133100.0 // https://www.allthingslighting.org/index.php/2019/02/15/solar-illumination/
-//            val LumEarth = slfoe * core.getCurrentObserver().getHomePlanet().albedo
-//            val elfom = LumEarth * beta
-//            val elfoe = elfom * albedo * gamma  // Brightness of full earthshine.
-//            val pfac =
-//                1.0 - (0.5 * (1.0 + Math.cos(signedPhaseAngle))) // Diminishing earthshine with phase angle
-//            val fluxTotal = fluxIll + elfoe * pfac
-//            return (-2.5 * Math.log10(fluxTotal * shadowFactor / rf)).toFloat()
-//        }
-//
-//        // Use empirical formulae for main planets when seen from earth. MallamaHilton_2018 also work from other locations.
-//        if (Planet.getApparentMagnitudeAlgorithm() == MallamaHilton_2018 || core.getCurrentLocation().planetName == "Earth") {
-//            val phaseDeg = phaseAngle * (180.0 / Math.PI)
-//            val d = 5.0 * Math.pow((phaseDeg / 180.0), 2.0) - 10.0
-//            return (this.getMagnitude() + d).toFloat()
-//        }
-//
-//        // Simplified Equation for Mars only; value produced by best estimates for single phase
-//        val planetDistance = this.getHeliocentricEclipticPos().norm()
-//        val value = Math.sqrt(planetDistance * Math.pow(planetDistance / planetDistance - 1.0, 0.5))
-//
-//        return (-2.5 * Math.log10(value)).toFloat()
 //    }
 //
 //
@@ -415,18 +486,242 @@
 //    }
 //
 //    companion object {
-//        private val asteroidColorMap = mapOf(
-//            PlanetType.ASTEROID to Vec3f(0.35f, 0.35f, 0.35f),
-//            PlanetType.PLUTINO to Vec3f(1f, 1f, 0f),
-//            PlanetType.COMET to Vec3f(0.25f, 0.75f, 1f),
-//            PlanetType.DWARF_PLANET to Vec3f(1f, 1f, 1f),
-//            PlanetType.CUBEWANO to Vec3f(1f, 0f, 0.8f),
-//            PlanetType.SDO to Vec3f(0.5f, 1f, 0.5f),
-//            PlanetType.OCO to Vec3f(0.75f, 0.75f, 1f),
-//            PlanetType.SEDNOID to Vec3f(0.75f, 1f, 0.75f),
-//            PlanetType.INTERSTELLAR to Vec3f(1f, 0.25f, 0.25f),
-//            PlanetType.UNDEFINED to Vec3f(1f, 0f, 0f)
-//        )
+//        var shaderError = false
+//        var planetShaderProgram: Shader? = null
+//        var planetShaderVars = PlanetShaderVars()
+//        var moonShaderProgram: Shader? = null
+//        var moonShaderVars = PlanetShaderVars()
+//        var transformShaderProgram: Shader? = null
+//        var transformShaderVars = PlanetShaderVars()
+//
+//        fun createShader(
+//            name: String,
+//            vars: PlanetShaderVars,
+//            vSrc: String,
+//            fSrc: String,
+//            prefix: String = "",
+//            fixedAttributeLocations: Map<String, AttributeLocation> = emptyMap()
+//        ): Shader? {
+//            val program = KglAndroid.createProgram()
+//            if (program == 0 || program == null) {
+//                Logger.e("Planet") { "Cannot create shader program object for $name" }
+//                return null
+//            }
+//
+//            fun compileShader(type: Int, source: String, shaderName: String): Int? {
+//                val shader = KglAndroid.createShader(type)
+//                if (shader == 0 || shader == null) {
+//                    Logger.e("Planet") { "$shaderName could not be created" }
+//                    return null
+//                }
+//
+//                KglAndroid.shaderSource(shader, prefix + source)
+//                KglAndroid.compileShader(shader)
+//
+//                val compileStatus = KglAndroid.getShaderParameter(shader, GL_COMPILE_STATUS)
+//                if (compileStatus == 0) {
+//                    val log = KglAndroid.getShaderInfoLog(shader)
+//                    Logger.e("Planet") { "$name $shaderName compilation failed: $log" }
+//                    KglAndroid.deleteShader(shader)
+//                    return null
+//                }
+//
+//                return shader
+//            }
+//
+//            val vertexShader = if (vSrc.isNotEmpty()) compileShader(
+//                GL_VERTEX_SHADER,
+//                vSrc,
+//                "vertex shader"
+//            ) else null
+//            val fragmentShader = if (fSrc.isNotEmpty()) compileShader(
+//                GL_FRAGMENT_SHADER,
+//                fSrc,
+//                "fragment shader"
+//            ) else null
+//
+//            vertexShader?.let { KglAndroid.attachShader(program, it) }
+//            fragmentShader?.let { KglAndroid.attachShader(program, it) }
+//
+//            // Привязка фиксированных атрибутов
+//            for ((attr, location) in fixedAttributeLocations) {
+//                KglAndroid.bindAttribLocation(program, location.ordinal, attr)
+//            }
+//
+//            // Линковка шейдерной программы
+//            KglAndroid.linkProgram(program)
+//            val linkStatus = KglAndroid.getProgramParameter(program, GL_LINK_STATUS)
+//
+//            if (linkStatus == 0) {
+//                val log = KglAndroid.getProgramInfoLog(program)
+//                Logger.e("Planet") { "$name shader program linking failed: $log" }
+//                KglAndroid.deleteProgram(program)
+//                return null
+//            }
+//
+//            vars.initLocations(program)
+//
+//            // Очистка памяти: удаление ненужных уже прикрепленных шейдеров
+//            vertexShader?.let { KglAndroid.deleteShader(it) }
+//            fragmentShader?.let { KglAndroid.deleteShader(it) }
+//
+//            return program
+//        }
+//
+//        @OptIn(ExperimentalResourceApi::class)
+//        suspend fun initShader(): Boolean {
+//            if (planetShaderProgram != null || shaderError) return !shaderError // Уже выполнено.
+//
+//            Logger.d("Shader") { "Initializing planets GL shaders..." }
+//            shaderError = true
+//
+//            // Загрузка шейдеров из файлов
+//            val vBytes = Res.readBytes("files/shaders/planet.vert")
+//            val fBytes = Res.readBytes("files/shaders/planet.frag")
+//
+//            val vsrc = vBytes.decodeToString()
+//            val fsrc = fBytes.decodeToString()
+//
+//            shaderError = false
+//
+//            // Создание шейдеров
+//            planetShaderProgram = createShader(
+//                "planetShaderProgram",
+//                planetShaderVars,
+//                vsrc,
+//                makeSRGBUtilsShader() + fsrc
+//            )
+//            moonShaderProgram = createShader(
+//                "moonShaderProgram",
+//                moonShaderVars,
+//                vsrc,
+//                makeSRGBUtilsShader() + fsrc,
+//                "#define IS_MOON\n\n"
+//            )
+//
+//            val attrLoc = mapOf(
+//                "unprojectedVertex" to AttributeLocation.ATTLOC_VERTEX,
+//                "texCoord" to AttributeLocation.ATTLOC_TEXCOORD,
+//                "normalIn" to AttributeLocation.ATTLOC_NORMAL
+//            )
+//
+//            // Трансформационный шейдер (используется для depth map)
+//            val transformVShader = """
+//            uniform mat4 projectionMatrix;
+//            attribute vec4 unprojectedVertex;
+//            void main() {
+//                gl_Position = projectionMatrix * unprojectedVertex;
+//            }
+//            """.trimIndent()
+//
+//            var transformFShader = "void main() { }"
+//
+//            transformShaderProgram = createShader(
+//                "transformShaderProgram",
+//                transformShaderVars,
+//                transformVShader,
+//                transformFShader,
+//                "",
+//                attrLoc
+//            )
+//
+//            // Проверка создания всех шейдеров
+//            shaderError = !(planetShaderProgram != null && moonShaderProgram != null &&
+//                    transformShaderProgram != null)
+//
+//            return true
+//        }
+//
+//        class PlanetShaderVars {
+//            // Vertex attributes
+//            var texCoord: Int = -1
+//            var unprojectedVertex: Int = -1
+//            var vertex: Int = -1
+//            var normalIn: Int = -1
+//
+//            // Common uniforms
+//            var projectionMatrix: Int = -1
+//            var hasAtmosphere: Int = -1
+//            var tex: Int = -1
+//            var lightDirection: Int = -1
+//            var eyeDirection: Int = -1
+//            var diffuseLight: Int = -1
+//            var ambientLight: Int = -1
+//            var shadowCount: Int = -1
+//            var shadowData: Int = -1
+//            var sunInfo: Int = -1
+//            var skyBrightness: Int = -1
+//            var orenNayarParameters: Int = -1
+//            var outgasParameters: Int = -1
+//
+//            // For Mars poles
+//            var poleLat: Int = -1
+//
+//            // Moon-specific variables
+//            var earthShadow: Int = -1
+//            var eclipsePush: Int = -1
+//            var normalMap: Int = -1
+//            var horizonMap: Int = -1
+//
+//            // Rings-specific variables
+//            var isRing: Int = -1
+//            var ring: Int = -1
+//            var outerRadius: Int = -1
+//            var innerRadius: Int = -1
+//            var ringS: Int = -1
+//
+//            // Shadowmap variables
+//            var shadowMatrix: Int = -1
+//            var shadowTex: Int = -1
+//            var poissonDisk: Int = -1
+//
+//            fun initLocations(program: Int) {
+//                GLES20.glUseProgram(program)
+//
+//                // Attributes
+//                texCoord = KglAndroid.getAttribLocation(program, "texCoord")
+//                unprojectedVertex = KglAndroid.getAttribLocation(program, "unprojectedVertex")
+//                vertex = KglAndroid.getAttribLocation(program, "vertex")
+//                normalIn = KglAndroid.getAttribLocation(program, "normalIn")
+//
+//                // Common uniforms
+//                projectionMatrix = KglAndroid.getUniformLocation(program, "projectionMatrix") ?: -1
+//                tex = KglAndroid.getUniformLocation(program, "tex") ?: -1
+//                poleLat = KglAndroid.getUniformLocation(program, "poleLat") ?: -1
+//                lightDirection = KglAndroid.getUniformLocation(program, "lightDirection") ?: -1
+//                eyeDirection = KglAndroid.getUniformLocation(program, "eyeDirection") ?: -1
+//                diffuseLight = KglAndroid.getUniformLocation(program, "diffuseLight") ?: -1
+//                ambientLight = KglAndroid.getUniformLocation(program, "ambientLight") ?: -1
+//                shadowCount = KglAndroid.getUniformLocation(program, "shadowCount") ?: -1
+//                shadowData = KglAndroid.getUniformLocation(program, "shadowData") ?: -1
+//                sunInfo = KglAndroid.getUniformLocation(program, "sunInfo") ?: -1
+//                skyBrightness = KglAndroid.getUniformLocation(program, "skyBrightness") ?: -1
+//                orenNayarParameters =
+//                    KglAndroid.getUniformLocation(program, "orenNayarParameters") ?: -1
+//                outgasParameters = KglAndroid.getUniformLocation(program, "outgasParameters") ?: -1
+//                hasAtmosphere = KglAndroid.getUniformLocation(program, "hasAtmosphere") ?: -1
+//
+//                // Moon-specific variables
+//                earthShadow = KglAndroid.getUniformLocation(program, "earthShadow") ?: -1
+//                eclipsePush = KglAndroid.getUniformLocation(program, "eclipsePush") ?: -1
+//                normalMap = KglAndroid.getUniformLocation(program, "normalMap") ?: -1
+//                horizonMap = KglAndroid.getUniformLocation(program, "horizonMap") ?: -1
+//
+//                // Rings-specific variables
+//                isRing = KglAndroid.getUniformLocation(program, "isRing") ?: -1
+//                ring = KglAndroid.getUniformLocation(program, "ring") ?: -1
+//                outerRadius = KglAndroid.getUniformLocation(program, "outerRadius") ?: -1
+//                innerRadius = KglAndroid.getUniformLocation(program, "innerRadius") ?: -1
+//                ringS = KglAndroid.getUniformLocation(program, "ringS") ?: -1
+//
+//                // Shadowmap variables
+//                shadowMatrix = KglAndroid.getUniformLocation(program, "shadowMatrix") ?: -1
+//                shadowTex = KglAndroid.getUniformLocation(program, "shadowTex") ?: -1
+//                poissonDisk = KglAndroid.getUniformLocation(program, "poissonDisk") ?: -1
+//
+//                GLES20.glUseProgram(0)
+//            }
+//        }
 //    }
 //
 //    // Вычисляет осевое вращение вокруг Z (суточное вращение вокруг полярной оси) [в градусах]
@@ -434,7 +729,6 @@
 //    // Для Земли звездное время — это угол вдоль экватора планеты от RA0 до меридиана,
 //    // то есть часовой угол первой точки Овна. Для Земли это звездное время в Гринвиче.
 //    //
-//    // В версии 0.21+ обновлены данные о вращении для планет и лун.
 //    // В этом контексте вычисляется угол W главного меридиана от восходящего узла экватора планеты на экваторе ICRF.
 //    //
 //    // Нам нужны и JD, и JDE для Земли (для других планет только JDE).
@@ -481,3 +775,74 @@
 ////fun CelestialObject.getAltAzPosAuto(val core: AstralisCore): Vec3d {
 ////    return core.j2000ToAltAz(getJ2000EquatorialPos(core), StelCore::RefractionAuto)
 ////}
+//
+//fun sSphere(
+//    model: Planet3DModel,
+//    radius: Float,
+//    oneMinusOblateness: Float,
+//    slices: UShort,
+//    stacks: UShort
+//) {
+//    val vertexList = mutableListOf<Float>()
+//    val texCoordList = mutableListOf<Float>()
+//    val indiceList = mutableListOf<UShort>()
+//
+//    var s: Float
+//    var t = 1f
+//
+//    val cosSinRho = computeCosSinRho(stacks.toInt())
+//    val cosSinTheta = computeCosSinTheta(slices.toInt())
+//
+//    val ds = 1f / slices.toFloat()
+//    val dt = 1f / stacks.toFloat()
+//
+//    var cosSinRhoPIndex = 0
+//    for (i in 0 until stacks.toInt()) {
+//        s = 0f
+//        var cosSinThetaPIndex = 0
+//        for (j in 0..slices.toInt()) {
+//            var x = -cosSinTheta[cosSinThetaPIndex + 1] * cosSinRho[cosSinRhoPIndex + 1]
+//            var y = cosSinTheta[cosSinThetaPIndex] * cosSinRho[cosSinRhoPIndex + 1]
+//            var z = cosSinRho[cosSinRhoPIndex]
+//
+//            texCoordList.add(s)
+//            texCoordList.add(t)
+//            vertexList.add(x * radius)
+//            vertexList.add(y * radius)
+//            vertexList.add(z * oneMinusOblateness * radius)
+//
+//            x = -cosSinTheta[cosSinThetaPIndex + 1] * cosSinRho[cosSinRhoPIndex + 3]
+//            y = cosSinTheta[cosSinThetaPIndex] * cosSinRho[cosSinRhoPIndex + 3]
+//            z = cosSinRho[cosSinRhoPIndex + 2]
+//
+//            texCoordList.add(s)
+//            texCoordList.add(t - dt)
+//            vertexList.add(x * radius)
+//            vertexList.add(y * radius)
+//            vertexList.add(z * oneMinusOblateness * radius)
+//
+//            s += ds
+//            cosSinThetaPIndex += 2
+//        }
+//
+//        val offset = i * (slices.toInt() + 1) * 2
+//        val limit = slices.toInt() * 2 + 2
+//
+//        for (j in 2 until limit step 2) {
+//            indiceList.add((offset + j - 2).toUShort())
+//            indiceList.add((offset + j - 1).toUShort())
+//            indiceList.add((offset + j).toUShort())
+//            indiceList.add((offset + j).toUShort())
+//            indiceList.add((offset + j - 1).toUShort())
+//            indiceList.add((offset + j + 1).toUShort())
+//        }
+//
+//        t -= dt
+//        cosSinRhoPIndex += 2
+//    }
+//
+//    // Записываем данные обратно в массивы модели
+//    model.vertexArr = vertexList.toFloatArray()
+//    model.texCoordArr = texCoordList.toFloatArray()
+//    model.indiceArr = indiceList.toUShortArray()
+//}

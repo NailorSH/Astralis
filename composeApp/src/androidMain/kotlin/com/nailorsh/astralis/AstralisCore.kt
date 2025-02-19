@@ -4,9 +4,9 @@
 //import com.nailorsh.astralis.core.utils.graphic.jd_fits_de431
 //import com.nailorsh.astralis.core.utils.graphic.jd_fits_de440
 //import com.nailorsh.astralis.core.utils.graphic.jd_fits_de441
-//import com.nailorsh.astralis.core.utils.graphic.math.PI_180
-//import com.nailorsh.astralis.core.utils.graphic.math.matrix.Mat4d
-//import com.nailorsh.astralis.core.utils.graphic.math.vector.Vec3d
+//import com.nailorsh.astralis.core.utils.graphics.math.PI_180
+//import com.nailorsh.astralis.core.utils.graphics.math.matrix.Mat4d
+//import com.nailorsh.astralis.core.utils.graphics.math.vector.Vec3d
 //import com.nailorsh.astralis.core.utils.time.currentInstant
 //import com.nailorsh.astralis.core.utils.time.getDateFromJulianDay
 //import com.nailorsh.astralis.core.utils.time.getDeltaTByEspenakMeeus

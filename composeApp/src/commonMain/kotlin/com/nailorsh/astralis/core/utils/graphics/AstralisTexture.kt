@@ -3,6 +3,7 @@ package com.nailorsh.astralis.core.utils.graphics
 import androidx.compose.ui.graphics.ImageBitmap
 import com.danielgergely.kgl.GL_CLAMP_TO_EDGE
 import com.danielgergely.kgl.GL_LINEAR
+import com.danielgergely.kgl.GL_TEXTURE0
 import com.danielgergely.kgl.GL_TEXTURE_2D
 import com.danielgergely.kgl.GL_TEXTURE_MAG_FILTER
 import com.danielgergely.kgl.GL_TEXTURE_MIN_FILTER
@@ -39,6 +40,16 @@ class AstralisTexture(
         }
 
         id = textureHandle
+    }
+
+    fun bind(slot: UInt): Boolean {
+        if (id == null) load()
+
+        return id?.let {
+            kgl.activeTexture(GL_TEXTURE0 + slot.toInt())
+            kgl.bindTexture(GL_TEXTURE_2D, it)
+            true
+        } ?: false
     }
 
     companion object {

@@ -1,26 +1,26 @@
-//package com.nailorsh.astralis.core.utils.graphic
-//
-//import kotlin.math.*
-//
-///* puts a large angle in the correct range 0 - 360 degrees */
-//fun rangeDegrees(d: Double): Double {
-//    var d = d % 360.0
-//    if (d < 0.0) d += 360.0
-//    return d
-//}
-//
-///* puts a large angle in the correct range 0 - 2PI radians */
-//fun rangeRadians(r: Double): Double {
-//    var r = r % (2 * PI)
-//    if (r < 0.0) r += 2 * PI
-//    return r
-//}
-//
-///* Calculate the mean sidereal time at the meridian of Greenwich (GMST) of a given date.
-// * returns mean sidereal time (degrees).
-// * Meeus, Astr. Algorithms, Formula 11.1, 11.4 pg 83. (or 2nd ed. 1998, 12.1, 12.4 pg.87)
-// * MAKE SURE argument JD is UT, not TT!
-// */
+package com.nailorsh.astralis.core.utils.graphic
+
+import kotlin.math.PI
+
+/* puts a large angle in the correct range 0 - 360 degrees */
+fun rangeDegrees(d: Double): Double {
+    var d = d % 360.0
+    if (d < 0.0) d += 360.0
+    return d
+}
+
+/* puts a large angle in the correct range 0 - 2PI radians */
+fun rangeRadians(r: Double): Double {
+    var r = r % (2 * PI)
+    if (r < 0.0) r += 2 * PI
+    return r
+}
+
+/* Calculate the mean sidereal time at the meridian of Greenwich (GMST) of a given date.
+ * returns mean sidereal time (degrees).
+ * Meeus, Astr. Algorithms, Formula 11.1, 11.4 pg 83. (or 2nd ed. 1998, 12.1, 12.4 pg.87)
+ * MAKE SURE argument JD is UT, not TT!
+ */
 //fun getMeanSiderealTime(JD: Double, JDE: Double): Double {
 //    val UT1 = (JD - floor(JD) + 0.5) * 86400.0  // time in seconds
 //    val t = (JDE - 2451545.0) / 36525.0

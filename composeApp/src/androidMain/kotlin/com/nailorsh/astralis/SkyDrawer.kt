@@ -1,7 +1,6 @@
 //package com.nailorsh.astralis
 //
 //class SkyDrawer(core: AstralisCore) {
-//    var flagHasAtmosphere = true
 //    val refraction = Refraction()
 //
 //    companion object {

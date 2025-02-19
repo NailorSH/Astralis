@@ -1,6 +1,6 @@
 //package com.nailorsh.astralis
 //
-//import com.nailorsh.astralis.core.utils.graphic.math.matrix.Mat4d
+//import com.nailorsh.astralis.core.utils.graphics.math.matrix.Mat4d
 //import kotlin.math.PI
 //
 //abstract class AstralisObserver(loc: AstralisLocation) {

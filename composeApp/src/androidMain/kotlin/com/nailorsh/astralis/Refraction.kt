@@ -2,8 +2,8 @@
 //
 //import com.nailorsh.astralis.SkyDrawer.Companion.MIN_GEO_ALTITUDE_DEG
 //import com.nailorsh.astralis.SkyDrawer.Companion.TRANSITION_WIDTH_GEO_DEG
-//import com.nailorsh.astralis.core.utils.graphic.math.matrix.Mat4d
-//import com.nailorsh.astralis.core.utils.graphic.math.vector.Vec3d
+//import com.nailorsh.astralis.core.utils.graphics.math.matrix.Mat4d
+//import com.nailorsh.astralis.core.utils.graphics.math.vector.Vec3d
 //import kotlin.math.PI
 //import kotlin.math.abs
 //
