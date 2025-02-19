@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalUnsignedTypes::class)
+
 package com.nailorsh.astralis.features.home.impl.presentation.ui.components
 
 
@@ -22,6 +24,13 @@ import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
 import kotlin.math.cos
 import kotlin.math.sin
+
+
+class Body3DModel(
+    var vertexArr: FloatArray = floatArrayOf(),
+    var texCoordArr: FloatArray = floatArrayOf(),
+    var indiceArr: UShortArray = ushortArrayOf()
+)
 
 val vertexShaderSkySphere = """
     attribute vec4 aPosition; // Позиция вершины
@@ -171,7 +180,7 @@ class SpaceRenderer(
     private lateinit var scaleDetector: ScaleGestureDetector
 
     // Матрицы
-    private val modelMatrix = FloatArray(16)
+    private val gridLinesSphereModelMatrix = FloatArray(16)
     private val viewMatrix = FloatArray(16)
     private val projectionMatrix = FloatArray(16)
     private val mvpMatrix = FloatArray(16)
@@ -251,11 +260,11 @@ class SpaceRenderer(
         val mvpMatrixHandle = GLES20.glGetUniformLocation(programSkySphere, "uMVPMatrix")
 
         // Двигаем сферу в позицию камеры
-        Matrix.setIdentityM(modelMatrix, 0)
-        Matrix.translateM(modelMatrix, 0, eyeX, eyeY, eyeZ) // Двигаем к камере
+        Matrix.setIdentityM(gridLinesSphereModelMatrix, 0)
+        Matrix.translateM(gridLinesSphereModelMatrix, 0, eyeX, eyeY, eyeZ) // Двигаем к камере
 
         // Создаём итоговую матрицу
-        Matrix.multiplyMM(mvpMatrix, 0, viewMatrix, 0, modelMatrix, 0)
+        Matrix.multiplyMM(mvpMatrix, 0, viewMatrix, 0, gridLinesSphereModelMatrix, 0)
         Matrix.multiplyMM(mvpMatrix, 0, projectionMatrix, 0, mvpMatrix, 0)
 
         GLES20.glUniformMatrix4fv(mvpMatrixHandle, 1, false, mvpMatrix, 0)
@@ -287,7 +296,7 @@ class SpaceRenderer(
             val altitudeRadians = Math.toRadians(planet.altitudeDegrees)
             val azimuthRadians = Math.toRadians(planet.azimuthDegrees)
 
-            val distanceMultiplier = 30.0 // Умножаем на 10 для увеличения расстояния
+            val distanceMultiplier = 50.0 // Умножаем на 50 для увеличения расстояния
             val x = cos(altitudeRadians) * sin(azimuthRadians) * distanceMultiplier
             val y = sin(altitudeRadians) * distanceMultiplier
             val z = cos(altitudeRadians) * cos(azimuthRadians) * distanceMultiplier
@@ -352,7 +361,7 @@ class SpaceRenderer(
         GLES20.glDisableVertexAttribArray(texCoordHandle)
     }
 
-    private fun generateSphereData(latitudeBands: Int, longitudeBands: Int) {
+    private fun generateSphereData(latitudeBands: Int, longitudeBands: Int, radius: Double = 1.0) {
         val vertices = mutableListOf<Float>()
         val indices = mutableListOf<Short>()
         val wireframeIndices = mutableListOf<Short>()
@@ -367,9 +376,9 @@ class SpaceRenderer(
                 val sinPhi = sin(phi)
                 val cosPhi = cos(phi)
 
-                val x = cosPhi * sinTheta
-                val y = cosTheta
-                val z = sinPhi * sinTheta
+                val x = cosPhi * sinTheta * radius
+                val y = cosTheta * radius
+                val z = sinPhi * sinTheta * radius
                 val u = lon.toFloat() / longitudeBands // Текстурные координаты U
                 val v = lat.toFloat() / latitudeBands // Текстурные координаты V
 

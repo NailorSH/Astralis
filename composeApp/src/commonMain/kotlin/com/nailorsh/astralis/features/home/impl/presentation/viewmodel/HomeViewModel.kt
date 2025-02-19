@@ -4,6 +4,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import co.touchlab.kermit.Logger
 import com.nailorsh.astralis.core.arch.BaseViewModel
 import com.nailorsh.astralis.core.coroutines.AppDispatchers
+import com.nailorsh.astralis.core.data.domain.SolarSystemPlanetsRadius
 import com.nailorsh.astralis.core.data.remote.AstronomyApi
 import com.nailorsh.astralis.core.data.remote.model.BodyPositionDto
 import com.nailorsh.astralis.core.utils.graphics.AstralisTexture
@@ -58,6 +59,12 @@ class HomeViewModel(
                     ).getOrThrow()
                         .filter { it.id !in listOf("earth", "moon") }
                         .map { it.toBodyWithPosition() }
+                        .also { newPlanets ->
+                            newPlanets.forEach {
+                                Logger.d("loadPlanets") { "id = ${it.id}" }
+                                Logger.d("loadPlanets") { "radiusKm = ${it.radiusKm}" }
+                            }
+                        }
 
                     _state.update {
                         it.copy(
@@ -74,12 +81,16 @@ class HomeViewModel(
 
     private suspend fun BodyPositionDto.toBodyWithPosition(): BodyWithPosition {
         val textureExtension = if (id == "sun") "jpg" else "png"
+        val radiusKm =
+            if (id == "pluto") 1188.0 else enumValueOf<SolarSystemPlanetsRadius>(id.uppercase()).km
+
 
         return BodyWithPosition(
             id = id,
             azimuthDegrees = this.position.horizontal.azimuth.degrees.toDouble(),
             altitudeDegrees = this.position.horizontal.altitude.degrees.toDouble(),
             distanceFromEarthAU = this.distance.fromEarth.au.toDouble(),
+            radiusKm = radiusKm,
             texture = astralisTexture(AstralisTexture.getImageBitmapByPath("$id.$textureExtension"))
         )
     }

@@ -7,5 +7,6 @@ data class BodyWithPosition(
     val azimuthDegrees: Double,
     val altitudeDegrees: Double,
     val distanceFromEarthAU: Double,
+    val radiusKm: Double,
     val texture: AstralisTexture
 )
