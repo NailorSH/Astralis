@@ -18,3 +18,14 @@ fun Kgl.setUniformValue(program: Program, name: String, value: FloatArray) {
     val location = getUniformLocation(program, name)
     location?.let { uniformMatrix4fv(it, false, value) }
 }
+
+expect fun Kgl.vertexAttribPointer(
+    location: Int,
+    size: Int,
+    type: Int,
+    normalized: Boolean,
+    stride: Int,
+    buffer: Buffer
+)
+
+expect fun Kgl.drawElements(mode: Int, count: Int, type: Int, indices: Buffer)

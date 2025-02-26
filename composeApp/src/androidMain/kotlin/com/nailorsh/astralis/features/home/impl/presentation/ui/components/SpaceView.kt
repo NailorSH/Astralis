@@ -7,7 +7,7 @@ import android.view.MotionEvent
 import com.nailorsh.astralis.features.home.impl.presentation.data.model.BodyWithPosition
 
 class SpaceView(context: Context, planets: List<BodyWithPosition>) : GLSurfaceView(context) {
-    private val renderer = SpaceRenderer(context, planets)
+    private val renderer = AndroidSpaceRenderer(context, planets)
 
     init {
         setEGLContextClientVersion(2)
