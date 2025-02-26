@@ -1,7 +1,5 @@
-package com.nailorsh.astralis.core.utils.graphics.math
-
-import kotlin.math.PI
-
+//package com.nailorsh.astralis.core.utils.graphics.math
+//
 //import com.nailorsh.astralis.core.utils.graphics.math.matrix.Mat4d
 //import com.nailorsh.astralis.core.utils.graphics.math.matrix.Mat4f
 //import com.nailorsh.astralis.core.utils.graphics.math.vector.Vector3
@@ -19,11 +17,8 @@ import kotlin.math.PI
 //const val PARSEC = 30.857E12
 //const val PI_180 = PI / 180
 //
-fun Double.toDegrees(): Double = this * 180 / PI
-fun Float.toDegrees(): Float = this.toDouble().toDegrees().toFloat()
-
-fun Double.toRadians(): Double = this / 180.0 * PI
-fun Float.toRadians(): Float = this.toDouble().toRadians().toFloat()
+//fun Double.toDegrees(): Double = this * 180 / PI
+//fun Double.toRadians(): Double = this / 180.0 * PI
 //
 //// Нечеткое сравнение двух чисел
 //fun fuzzyEquals(a: Double, b: Double, eps: Double = Double.MIN_VALUE): Boolean {
