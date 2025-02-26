@@ -77,8 +77,24 @@ val fragmentShaderPlanets = """
 
 """.trimIndent()
 
+private val vertexShaderStars = """
+        attribute vec4 aPosition;
+        uniform mat4 uMVPMatrix;
+        void main() {
+            gl_Position = uMVPMatrix * aPosition;
+        }
+    """.trimIndent()
+
+private val fragmentShaderStars = """
+        precision mediump float;
+        uniform vec4 uColor;
+        void main() {
+            gl_FragColor = uColor;
+        }
+    """.trimIndent()
+
 class SpaceRenderer(
-    private val context: Context,
+    context: Context,
     private val planets: List<BodyWithPosition>
 ) : GLSurfaceView.Renderer {
     private val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
@@ -180,14 +196,8 @@ class SpaceRenderer(
     private lateinit var scaleDetector: ScaleGestureDetector
 
     // Матрицы
-    private val gridLinesSphereModelMatrix = FloatArray(16)
     private val viewMatrix = FloatArray(16)
     private val projectionMatrix = FloatArray(16)
-    private val mvpMatrix = FloatArray(16)
-
-    // OpenGL ресурсы
-    private var programSkySphere = 0
-    private var programPlanets = 0
 
     // Буферы для данных сферы
     private var vertexBuffer: FloatBuffer? = null
@@ -206,10 +216,12 @@ class SpaceRenderer(
             magnetometer,
             SensorManager.SENSOR_DELAY_UI
         )
-
     }
 
+    private val stars = generateRandomStars(100)
+
     private lateinit var planetRenderer: PlanetRenderer
+    private lateinit var starRenderer: StarRenderer
     private lateinit var gridRenderer: GridRenderer
 
     override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
@@ -222,11 +234,13 @@ class SpaceRenderer(
         val programSkySphere =
             initializeShaderProgram(vertexShaderSkySphere, fragmentShaderSkySphereNoTexture)
         val programPlanets = initializeShaderProgram(vertexShaderPlanets, fragmentShaderPlanets)
+        val programStars = initializeShaderProgram(vertexShaderStars, fragmentShaderStars)
 
         generateSphereData(40, 40)
 
         // Инициализация рендереров
         planetRenderer = PlanetRenderer(programPlanets, vertexBuffer, indexBuffer, indexCount)
+        starRenderer = StarRenderer(programStars)
         gridRenderer = GridRenderer(programSkySphere, vertexBuffer, wireframeIndexBuffer)
     }
 
@@ -248,113 +262,9 @@ class SpaceRenderer(
 
         // Рендеринг планет
         planetRenderer.renderPlanets(planets, viewMatrix, projectionMatrix)
-    }
 
-    private fun drawGridLines() {
-        GLES20.glUseProgram(programSkySphere)
-
-        val mvpMatrixHandle = GLES20.glGetUniformLocation(programSkySphere, "uMVPMatrix")
-
-        // Двигаем сферу в позицию камеры
-        Matrix.setIdentityM(gridLinesSphereModelMatrix, 0)
-        Matrix.translateM(gridLinesSphereModelMatrix, 0, eyeX, eyeY, eyeZ) // Двигаем к камере
-
-        // Создаём итоговую матрицу
-        Matrix.multiplyMM(mvpMatrix, 0, viewMatrix, 0, gridLinesSphereModelMatrix, 0)
-        Matrix.multiplyMM(mvpMatrix, 0, projectionMatrix, 0, mvpMatrix, 0)
-
-        GLES20.glUniformMatrix4fv(mvpMatrixHandle, 1, false, mvpMatrix, 0)
-
-        val positionHandle = GLES20.glGetAttribLocation(programSkySphere, "aPosition")
-        GLES20.glEnableVertexAttribArray(positionHandle)
-        GLES20.glVertexAttribPointer(positionHandle, 3, GLES20.GL_FLOAT, false, 5 * 4, vertexBuffer)
-
-        GLES20.glEnable(GLES20.GL_BLEND)
-        GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA)
-
-        val colorHandle = GLES20.glGetUniformLocation(programSkySphere, "uColor")
-        GLES20.glUniform4f(colorHandle, 0f, 0f, 0f, 1f) // Чёрный цвет, полностью непрозрачный
-
-        GLES20.glDrawElements(
-            GLES20.GL_LINES,
-            wireframeIndexBuffer!!.limit(),
-            GLES20.GL_UNSIGNED_SHORT,
-            wireframeIndexBuffer
-        )
-
-        GLES20.glDisableVertexAttribArray(positionHandle)
-    }
-
-
-    private fun renderPlanets() {
-        planets.forEach { planet ->
-            // Конвертация горизонтальных координат в декартовы
-            val altitudeRadians = Math.toRadians(planet.altitudeDegrees)
-            val azimuthRadians = Math.toRadians(planet.azimuthDegrees)
-
-            val distanceMultiplier = 50.0 // Умножаем на 50 для увеличения расстояния
-            val x = cos(altitudeRadians) * sin(azimuthRadians) * distanceMultiplier
-            val y = sin(altitudeRadians) * distanceMultiplier
-            val z = cos(altitudeRadians) * cos(azimuthRadians) * distanceMultiplier
-
-            // Устанавливаем позицию планеты в пространстве
-            val position = floatArrayOf(x.toFloat(), y.toFloat(), z.toFloat())
-
-            // Определяем масштаб (по расстоянию до Земли)
-            val scale = (1.0 / planet.distanceFromEarthAU).toFloat()
-
-            // Модельная матрица для планеты
-            val modelMatrix = FloatArray(16).apply {
-                Matrix.setIdentityM(this, 0)
-                Matrix.translateM(this, 0, position[0], position[1], position[2])
-                Matrix.scaleM(this, 0, scale, scale, scale)
-            }
-
-            // Итоговая MVP-матрица
-            val mvpMatrix = FloatArray(16).apply {
-                Matrix.multiplyMM(this, 0, viewMatrix, 0, modelMatrix, 0)
-                Matrix.multiplyMM(this, 0, projectionMatrix, 0, this, 0)
-            }
-
-            // Рисуем планету
-            drawPlanet(mvpMatrix, planet)
-        }
-    }
-
-    private fun drawPlanet(mvpMatrix: FloatArray, planet: BodyWithPosition) {
-        GLES20.glUseProgram(programPlanets)
-
-        val mvpMatrixHandle = GLES20.glGetUniformLocation(programPlanets, "uMVPMatrix")
-        GLES20.glUniformMatrix4fv(mvpMatrixHandle, 1, false, mvpMatrix, 0)
-
-        val positionHandle = GLES20.glGetAttribLocation(programPlanets, "aPosition")
-        GLES20.glEnableVertexAttribArray(positionHandle)
-        GLES20.glVertexAttribPointer(positionHandle, 3, GLES20.GL_FLOAT, false, 5 * 4, vertexBuffer)
-
-        val texCoordHandle = GLES20.glGetAttribLocation(programPlanets, "aTexCoord")
-        GLES20.glEnableVertexAttribArray(texCoordHandle)
-        val texCoordBuffer = vertexBuffer!!.duplicate()
-        texCoordBuffer.position(3)
-        GLES20.glVertexAttribPointer(
-            texCoordHandle,
-            2,
-            GLES20.GL_FLOAT,
-            false,
-            5 * 4,
-            texCoordBuffer
-        )
-
-        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, planet.texture.id ?: 0)
-
-        GLES20.glDrawElements(
-            GLES20.GL_TRIANGLES,
-            indexCount,
-            GLES20.GL_UNSIGNED_SHORT,
-            indexBuffer
-        )
-
-        GLES20.glDisableVertexAttribArray(positionHandle)
-        GLES20.glDisableVertexAttribArray(texCoordHandle)
+        // Рендеринг звёзд
+        starRenderer.renderStars(stars, viewMatrix, projectionMatrix)
     }
 
     private fun generateSphereData(latitudeBands: Int, longitudeBands: Int, radius: Double = 1.0) {
@@ -459,27 +369,6 @@ class SpaceRenderer(
         )
     }
 
-    private fun initializeShaderProgram(
-        vertexShaderCode: String,
-        fragmentShaderCode: String,
-    ): Int {
-        val vertexShader = compileShader(GLES20.GL_VERTEX_SHADER, vertexShaderCode)
-        val fragmentShader =
-            compileShader(GLES20.GL_FRAGMENT_SHADER, fragmentShaderCode)
-
-        val program = createProgram(vertexShader, fragmentShader)
-
-        GLES20.glUseProgram(program)
-
-        val textureHandle = GLES20.glGetUniformLocation(program, "uTexture")
-        GLES20.glUniform1i(
-            textureHandle,
-            0
-        ) // Указываем, что текстура будет использоваться в unit 0
-
-        return program
-    }
-
     fun onTouchEvent(event: MotionEvent): Boolean {
         scaleDetector.onTouchEvent(event)
 
@@ -518,4 +407,25 @@ class SpaceRenderer(
                 }
             })
     }
+}
+
+fun initializeShaderProgram(
+    vertexShaderCode: String,
+    fragmentShaderCode: String,
+): Int {
+    val vertexShader = compileShader(GLES20.GL_VERTEX_SHADER, vertexShaderCode)
+    val fragmentShader =
+        compileShader(GLES20.GL_FRAGMENT_SHADER, fragmentShaderCode)
+
+    val program = createProgram(vertexShader, fragmentShader)
+
+    GLES20.glUseProgram(program)
+
+    val textureHandle = GLES20.glGetUniformLocation(program, "uTexture")
+    GLES20.glUniform1i(
+        textureHandle,
+        0
+    ) // Указываем, что текстура будет использоваться в unit 0
+
+    return program
 }
