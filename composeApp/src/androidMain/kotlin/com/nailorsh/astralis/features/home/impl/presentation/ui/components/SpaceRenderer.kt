@@ -209,33 +209,25 @@ class SpaceRenderer(
 
     }
 
+    private lateinit var planetRenderer: PlanetRenderer
+    private lateinit var gridRenderer: GridRenderer
+
     override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
+        // Инициализация OpenGL и шейдеров
         GLES20.glClearColor(0f, 0f, 0f, 0f)
         GLES20.glEnable(GLES20.GL_DEPTH_TEST)
 
         planets.forEach { it.texture.load() }
 
-        programSkySphere = initializeShaderProgram(
-            vertexShaderSkySphere,
-            fragmentShaderSkySphereNoTexture
-        )
-        programPlanets = initializeShaderProgram(vertexShaderPlanets, fragmentShaderPlanets)
+        val programSkySphere =
+            initializeShaderProgram(vertexShaderSkySphere, fragmentShaderSkySphereNoTexture)
+        val programPlanets = initializeShaderProgram(vertexShaderPlanets, fragmentShaderPlanets)
 
         generateSphereData(40, 40)
 
-        // Настройка фильтрации текстуры
-        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR)
-        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR)
-        GLES20.glTexParameteri(
-            GLES20.GL_TEXTURE_2D,
-            GLES20.GL_TEXTURE_WRAP_S,
-            GLES20.GL_CLAMP_TO_EDGE
-        )
-        GLES20.glTexParameteri(
-            GLES20.GL_TEXTURE_2D,
-            GLES20.GL_TEXTURE_WRAP_T,
-            GLES20.GL_CLAMP_TO_EDGE
-        )
+        // Инициализация рендереров
+        planetRenderer = PlanetRenderer(programPlanets, vertexBuffer, indexBuffer, indexCount)
+        gridRenderer = GridRenderer(programSkySphere, vertexBuffer, wireframeIndexBuffer)
     }
 
     override fun onSurfaceChanged(gl: GL10?, width: Int, height: Int) {
@@ -250,8 +242,12 @@ class SpaceRenderer(
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT or GLES20.GL_DEPTH_BUFFER_BIT)
 
         updateViewMatrix()
-        drawGridLines()
-        renderPlanets()
+
+        // Рендеринг сетки
+        gridRenderer.drawGridLines(viewMatrix, projectionMatrix, eyeX, eyeY, eyeZ)
+
+        // Рендеринг планет
+        planetRenderer.renderPlanets(planets, viewMatrix, projectionMatrix)
     }
 
     private fun drawGridLines() {
