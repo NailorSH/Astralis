@@ -124,8 +124,17 @@ class SpaceRenderer(
                     geomagnetic
                 )
             ) {
+                // Корректируем матрицу вращения для вертикального положения телефона
+                val adjustedRotationMatrix = FloatArray(9)
+                SensorManager.remapCoordinateSystem(
+                    rotationMatrix,
+                    SensorManager.AXIS_X, // Ось X
+                    SensorManager.AXIS_Z, // Ось Z
+                    adjustedRotationMatrix
+                )
+
                 val orientation = FloatArray(3)
-                SensorManager.getOrientation(rotationMatrix, orientation)
+                SensorManager.getOrientation(adjustedRotationMatrix, orientation)
 
                 // Преобразуем радианы в градусы
                 val newAzimuth = -Math.toDegrees(orientation[0].toDouble()).toFloat()
