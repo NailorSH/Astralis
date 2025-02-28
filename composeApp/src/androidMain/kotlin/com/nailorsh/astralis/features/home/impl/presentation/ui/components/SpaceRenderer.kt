@@ -25,13 +25,6 @@ import javax.microedition.khronos.opengles.GL10
 import kotlin.math.cos
 import kotlin.math.sin
 
-
-class Body3DModel(
-    var vertexArr: FloatArray = floatArrayOf(),
-    var texCoordArr: FloatArray = floatArrayOf(),
-    var indiceArr: UShortArray = ushortArrayOf()
-)
-
 val vertexShaderSkySphere = """
     attribute vec4 aPosition; // Позиция вершины
     attribute vec2 aTexCoord; // Текстурные координаты
@@ -204,19 +197,6 @@ class SpaceRenderer(
     private var indexBuffer: ShortBuffer? = null
     private var wireframeIndexBuffer: ShortBuffer? = null
     private var indexCount = 0
-
-    init {
-        sensorManager.registerListener(
-            sensorEventListener,
-            accelerometer,
-            SensorManager.SENSOR_DELAY_UI
-        )
-        sensorManager.registerListener(
-            sensorEventListener,
-            magnetometer,
-            SensorManager.SENSOR_DELAY_UI
-        )
-    }
 
     private val stars = generateRandomStars(100)
 

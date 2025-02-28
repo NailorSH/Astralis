@@ -1,3 +1,5 @@
 <resources>
     <string name="astralis">Astralis</string>
+    <string name="ar_plus">AR+</string>
+    <string name="ar_minus">AR-</string>
 </resources>
